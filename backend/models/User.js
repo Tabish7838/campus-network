@@ -27,6 +27,19 @@ const User = {
     return data;
   },
 
+  async updateProfile(userId, profileData) {
+    const { data, error } = await supabase
+      .from('users')
+      .update(profileData)
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) {
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
   async getRole(userId) {
     const { data, error } = await supabase.from('users').select('role').eq('id', userId).single();
     if (error) {

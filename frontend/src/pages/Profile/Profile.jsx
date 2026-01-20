@@ -27,6 +27,7 @@ const Profile = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [nameError, setNameError] = useState('');
+  const [nameLoading, setNameLoading] = useState(false);
 
   const getDisplayName = (profile) => {
   if (profile.name) return profile.name;
@@ -70,10 +71,23 @@ const handleSaveName = async () => {
     return;
   }
 
-  // ❗ abhi backend call nahi
-  // sirf UI behavior
-  setProfile((prev) => ({ ...prev, name: trimmed }));
-  setIsEditingName(false);
+  try {
+    setNameLoading(true);
+    setNameError('');
+    
+    // Call the API to update the name in the database
+    const { updateProfile } = await import('../../services/user.api.js');
+    const updatedProfile = await updateProfile({ name: trimmed });
+    
+    // Update the local state with the response from the server
+    setProfile(updatedProfile);
+    setIsEditingName(false);
+  } catch (error) {
+    setNameError('Failed to update name. Please try again.');
+    console.error('Error updating name:', error);
+  } finally {
+    setNameLoading(false);
+  }
 };
 
   const tabContent = useMemo(() => {
@@ -104,10 +118,29 @@ const handleSaveName = async () => {
         );
       default:
         return (
-          <p className="text-sm text-muted leading-relaxed">
-            {profile.bio ||
-              'Add a short bio to tell others about your passions, projects, and what you are looking to build.'}
-          </p>
+          <div className="space-y-4">
+            {/* Academic Information */}
+            {profile.college && profile.course && profile.branch && profile.year && (
+              <div className="rounded-2xl bg-surface p-4">
+                <h3 className="text-sm font-semibold text-body mb-2">Academic Information</h3>
+                <div className="space-y-1 text-sm text-muted">
+                  <p><span className="font-medium">College:</span> {profile.college}</p>
+                  <p><span className="font-medium">Course:</span> {profile.course}</p>
+                  <p><span className="font-medium">Branch:</span> {profile.branch}</p>
+                  <p><span className="font-medium">Year:</span> {profile.year}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Bio */}
+            <div>
+              <h3 className="text-sm font-semibold text-body mb-2">About</h3>
+              <p className="text-sm text-muted leading-relaxed">
+                {profile.bio ||
+                  'Add a short bio to tell others about your passions, projects, and what you are looking to build.'}
+              </p>
+            </div>
+          </div>
         );
     }
   }, [activeTab, profile]);
@@ -202,8 +235,8 @@ const handleSaveName = async () => {
     )}
 
     <div className="flex gap-2">
-      <Button size="sm" variant="primary" onClick={handleSaveName}>
-        Save
+      <Button size="sm" variant="primary" onClick={handleSaveName} disabled={nameLoading}>
+        {nameLoading ? <Loader size="sm" inline /> : 'Save'}
       </Button>
       <Button
         size="sm"
@@ -213,6 +246,7 @@ const handleSaveName = async () => {
           setNameInput(profile.name);
           setNameError('');
         }}
+        disabled={nameLoading}
       >
         Cancel
       </Button>
@@ -225,7 +259,15 @@ const handleSaveName = async () => {
 )}
 
             <p className="text-sm text-muted">
-              {profile.batch ? `${profile.batch} • ` : ''}
+              {profile.college && profile.course && profile.branch && profile.year ? (
+                <>
+                  {profile.course} - {profile.branch} • Year {profile.year}
+                  <br />
+                  {profile.college}
+                </>
+              ) : (
+                profile.batch ? `${profile.batch} • ` : ''
+              )}
               {profile.academic_year || profile.program || ''}
             </p>
             <p className="mt-3 text-sm text-muted">{profile.tagline || profile.headline || ''}</p>

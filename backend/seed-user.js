@@ -2,7 +2,7 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-// This script manually inserts a user profile.
+// This script manually inserts a user profile with the new required fields.
 // Run it from your backend directory with: node seed-user.js
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -18,9 +18,13 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // --- Configuration ---
 const USER_ID = 'd07aa0ff-b7a6-4ff6-b2a2-946ecd90f793'; // The UUID you provided
-const USER_EMAIL = 'test-user@example.com'; // Replace with the actual email if known, otherwise this is fine.
+const USER_EMAIL = 'test-user@example.com'; // Replace with the actual email if known
 const USER_NAME = 'Test User';
 const USER_ROLE = 'student'; // 'student' or 'startup'
+const USER_COLLEGE = 'Test University';
+const USER_COURSE = 'B.Tech';
+const USER_BRANCH = 'Computer Science';
+const USER_YEAR = 3;
 // ---------------------
 
 const seedUser = async () => {
@@ -34,6 +38,10 @@ const seedUser = async () => {
         email: USER_EMAIL,
         name: USER_NAME,
         role: USER_ROLE,
+        college: USER_COLLEGE,
+        course: USER_COURSE,
+        branch: USER_BRANCH,
+        year: USER_YEAR,
         // You can add other default fields here if needed
         // level: 'Explorer',
         // trust_score: 0,
