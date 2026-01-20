@@ -3,7 +3,7 @@ import Card from '../../components/Card/Card.jsx';
 import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
-import { getMe, endorsePeer } from '../../services/user.api.js';
+import { getMe, endorsePeer, updateProfile } from '../../services/user.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -76,7 +76,6 @@ const handleSaveName = async () => {
     setNameError('');
     
     // Call the API to update the name in the database
-    const { updateProfile } = await import('../../services/user.api.js');
     const updatedProfile = await updateProfile({ name: trimmed });
     
     // Update the local state with the response from the server
