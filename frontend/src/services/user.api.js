@@ -2,6 +2,8 @@ import { apiFetch } from './apiClient.js';
 
 export const getMe = () => apiFetch('/api/users/me');
 
+export const getUserProfileById = (id) => apiFetch(`/api/users/profile/${id}`);
+
 export const updateProfile = (profileData) =>
   apiFetch('/api/users/profile', {
     method: 'PUT',

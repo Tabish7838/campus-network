@@ -25,6 +25,26 @@ const getMyProfile = async (req, res) => {
   }
 };
 
+const getProfileById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const userProfile = await User.findById(id);
+
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(userProfile);
+  } catch (error) {
+    res.status(500).json({ message: `Error fetching profile: ${error.message}` });
+  }
+};
+
 const updateProfile = async (req, res) => {
   try {
     const { name, college, course, branch, year } = req.body;
@@ -52,5 +72,6 @@ const updateProfile = async (req, res) => {
 
 module.exports = {
   getMyProfile,
+  getProfileById,
   updateProfile,
 };

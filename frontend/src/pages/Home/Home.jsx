@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import Card from '../../components/Card/Card.jsx';
 import Button from '../../components/Button/Button.jsx';
-import Badge from '../../components/Badge/Badge.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
 import FilterBar from '../../components/FilterBar/FilterBar.jsx';
-import { fetchFeed, createFeedPost } from '../../services/feed.api.js';
-import { formatSkills, formatName } from '../../utils/formatters.js';
+import PostCard from '../../components/PostCard/PostCard.jsx';
+import { createFeedPost } from '../../services/feed.api.js';
+import useFeedPosts from '../../hooks/useFeedPosts.js';
 
 const stageFilters = [
   { label: 'All', value: 'all' },
@@ -23,43 +22,18 @@ const initialFormState = {
 };
 
 const Home = () => {
-  const navigate = useNavigate();
-  const [feed, setFeed] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const { posts, loading, error, currentFilter, loadPosts } = useFeedPosts();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(initialFormState);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState(null);
 
-  const loadFeed = async (selectedFilter = filter) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = selectedFilter !== 'all' ? { stage: selectedFilter } : undefined;
-      const data = await fetchFeed(params);
-      setFeed(Array.isArray(data?.results) ? data.results : data || []);
-    } catch (err) {
-      setError(err.message || 'Unable to load feed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadFeed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const filteredFeed = useMemo(() => {
-    if (filter === 'all') return feed;
-    return feed.filter((item) => item.stage === filter);
-  }, [feed, filter]);
+    loadPosts('all');
+  }, [loadPosts]);
 
   const handleFilterChange = (value) => {
-    setFilter(value);
-    loadFeed(value);
+    loadPosts(value);
   };
 
   const handleFormChange = (event) => {
@@ -80,7 +54,7 @@ const Home = () => {
       });
       setShowForm(false);
       setForm(initialFormState);
-      loadFeed();
+      loadPosts(currentFilter || 'all');
     } catch (err) {
       setFormError(err.message || 'Failed to create post');
     } finally {
@@ -206,7 +180,7 @@ const Home = () => {
         </Card>
       )}
 
-      <FilterBar filters={stageFilters} activeFilter={filter} onFilterChange={handleFilterChange} />
+      <FilterBar filters={stageFilters} activeFilter={currentFilter} onFilterChange={handleFilterChange} />
 
       {loading ? (
         <div className="flex justify-center py-10">
@@ -218,53 +192,11 @@ const Home = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredFeed.map((post) => (
-            <Card key={post.id} className="space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-body">{post.title}</h3>
-                  <p className="mt-1 text-sm text-muted">{post.description}</p>
-                </div>
-                <Badge variant="primary">{post.stage}</Badge>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {formatSkills(post.required_skills).map((skill) => (
-                  <Badge key={skill} variant="neutral">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-
-              {Array.isArray(post.collaborators) && post.collaborators.length > 0 && (
-                <div className="rounded-2xl bg-surface p-4">
-                  <p className="text-xs font-semibold text-muted">Collaborators</p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-body">
-                    {post.collaborators.map((person) => {
-                      const collaborator =
-                        typeof person === 'string'
-                          ? person
-                          : person?.name || person?.user?.name || person?.user_name || '';
-                      return (
-                        <span key={person.id || person?.user?.id || collaborator} className="rounded-full bg-card px-3 py-1 shadow">
-                          {formatName(collaborator)}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <Button variant="subtle">View Details</Button>
-                <Button variant="primary" onClick={() => navigate('/lets-build')}>
-                  Let's Build
-                </Button>
-              </div>
-            </Card>
+          {posts.map((post) => (
+            <PostCard key={post.post_id || post.id} post={post} />
           ))}
 
-          {!filteredFeed.length && (
+          {!posts.length && (
             <Card className="text-center text-sm text-muted">
               No projects found for this filter yet. Try exploring other stages or share something new.
             </Card>
