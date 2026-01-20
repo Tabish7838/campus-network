@@ -90,15 +90,41 @@ const Home = () => {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-body">Home Feed</h1>
-          <p className="text-sm text-muted">Explore startup ideas and join projects from your campus network.</p>
-        </div>
-        <Button variant="primary" size="sm" onClick={() => setShowForm((prev) => !prev)}>
-          {showForm ? 'Close' : 'Add Post'}
-        </Button>
-      </header>
+      <header className="space-y-3">
+  {/* Top row */}
+  <div className="flex items-center justify-between">
+    <h1 className="text-xl font-semibold text-body">
+      Startup Ideas
+    </h1>
+
+    <div className="flex items-center gap-2">
+      {/* Search icon */}
+      <button
+        className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+        aria-label="Search"
+      >
+        🔍
+      </button>
+
+      {/* Add post */}
+      <Button
+        size="sm"
+        variant="primary"
+        onClick={() => setShowForm(true)}
+      >
+        Add
+      </Button>
+    </div>
+  </div>
+
+  {/* Search input */}
+  <input
+    type="text"
+    placeholder="Search ideas, projects, people"
+    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+  />
+</header>
+
 
       {showForm && (
         <Card className="space-y-4">

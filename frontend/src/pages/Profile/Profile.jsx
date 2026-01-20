@@ -24,6 +24,15 @@ const Profile = () => {
   const [endorsementComment, setEndorsementComment] = useState('');
   const [endorsementLoading, setEndorsementLoading] = useState(false);
   const [endorsementSuccess, setEndorsementSuccess] = useState(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [nameError, setNameError] = useState('');
+
+  const getDisplayName = (profile) => {
+  if (profile.name) return profile.name;
+  if (profile.email) return profile.email.split('@')[0];
+  return 'User';
+};
 
   const loadProfile = async () => {
     setLoading(true);
@@ -41,6 +50,31 @@ const Profile = () => {
   useEffect(() => {
     loadProfile();
   }, []);
+
+  useEffect(() => {
+  if (profile?.name) {
+    setNameInput(profile.name);
+  }
+}, [profile]);
+
+const handleSaveName = async () => {
+  const trimmed = nameInput.trim();
+
+  if (trimmed.length < 3) {
+    setNameError('Name must be at least 3 characters');
+    return;
+  }
+
+  if (trimmed.length > 40) {
+    setNameError('Name is too long');
+    return;
+  }
+
+  // ❗ abhi backend call nahi
+  // sirf UI behavior
+  setProfile((prev) => ({ ...prev, name: trimmed }));
+  setIsEditingName(false);
+};
 
   const tabContent = useMemo(() => {
     if (!profile) return null;
@@ -115,15 +149,15 @@ const Profile = () => {
   if (!profile) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-md space-y-6 px-3">
       <header className="space-y-4">
         <div className="flex items-start gap-4">
-          <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-4 border-primary-light">
+          <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-primary-light">
             {profile.avatar_url ? (
               <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-primary-light text-2xl text-primary">
-                {profile.name?.[0]?.toUpperCase() || 'U'}
+                {getDisplayName(profile)[0]?.toUpperCase()}
               </div>
             )}
           </div>
@@ -132,19 +166,76 @@ const Profile = () => {
               <Badge variant="level">Level {profile.level_badge || profile.level}</Badge>
               <Badge variant="primary">{profile.role?.toUpperCase()}</Badge>
             </div>
-            <h1 className="mt-2 text-2xl font-semibold text-body">{profile.name}</h1>
+            {!isEditingName ? (
+              <div className="mt-2 flex items-center gap-2">
+                <h1 className="text-lg font-semibold text-body">
+                  {getDisplayName(profile)}
+                </h1>
+
+                <button
+                onClick={() => setIsEditingName(true)}
+                className="text-xs text-muted"
+                aria-label="Edit name"
+              >
+                ✏️
+    </button>
+  </div>
+) : (
+  <div className="mt-2 space-y-2">
+    <input
+      value={nameInput}
+      onChange={(e) => {
+        const value = e.target.value;
+
+        // frontend guard: only letters & spaces
+        if (!/^[A-Za-z ]*$/.test(value)) return;
+
+        setNameInput(value);
+        setNameError('');
+      }}
+      placeholder="Enter your full name"
+      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+    />
+
+    {nameError && (
+      <p className="text-xs text-danger">{nameError}</p>
+    )}
+
+    <div className="flex gap-2">
+      <Button size="sm" variant="primary" onClick={handleSaveName}>
+        Save
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => {
+          setIsEditingName(false);
+          setNameInput(profile.name);
+          setNameError('');
+        }}
+      >
+        Cancel
+      </Button>
+    </div>
+
+    <p className="text-[11px] text-muted">
+      Only letters and spaces allowed.
+    </p>
+  </div>
+)}
+
             <p className="text-sm text-muted">
               {profile.batch ? `${profile.batch} • ` : ''}
               {profile.academic_year || profile.program || ''}
             </p>
             <p className="mt-3 text-sm text-muted">{profile.tagline || profile.headline || ''}</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut}>
+          <Button variant="ghost" size="icon" onClick={signOut}>
             Log out
           </Button>
         </div>
 
-        <div className="grid gap-4 rounded-3xl bg-card p-5 shadow-card sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">
           <div className="space-y-1 text-center">
             <Badge variant="trust" className="mx-auto w-fit text-sm">
               {formatTrustScore(profile.trust_score)} Trust
@@ -169,7 +260,7 @@ const Profile = () => {
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`rounded-full px-4 py-2 text-xs font-semibold ${
+              className={`rounded-full px-3 py-2 text-sm font-semibold ${
                 tab.key === activeTab ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-body'
               }`}
             >
@@ -180,7 +271,7 @@ const Profile = () => {
         <div>{tabContent}</div>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+      <div className="space-y-6">
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-body">Peer Endorsements</h2>
