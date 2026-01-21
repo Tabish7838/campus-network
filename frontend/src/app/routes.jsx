@@ -3,7 +3,9 @@ import { lazy } from 'react';
 const HomePage = lazy(() => import('../pages/Home/Home.jsx'));
 const InternshipsPage = lazy(() => import('../pages/Internships/Internships.jsx'));
 const HirePage = lazy(() => import('../pages/Hire/Hire.jsx'));
-const EventsPage = lazy(() => import('../pages/Events/Events.jsx'));
+const EventsListPage = lazy(() => import('../pages/Events/EventsList.jsx'));
+const EventDetailPage = lazy(() => import('../pages/Events/EventDetail.jsx'));
+const EventAdminDashboardPage = lazy(() => import('../pages/Events/EventAdminDashboard.jsx'));
 const ProfilePage = lazy(() => import('../pages/Profile/Profile.jsx'));
 const LetsBuildPage = lazy(() => import('../pages/LetsBuild/LetsBuild.jsx'));
 
@@ -11,7 +13,7 @@ const routes = [
   {
     path: '/',
     element: HomePage,
-    allowedRoles: ['student', 'startup', 'admin'],
+    allowedRoles: ['student', 'startup', 'admin', 'organizer', 'club'],
   },
   {
     path: '/internships',
@@ -25,8 +27,18 @@ const routes = [
   },
   {
     path: '/events',
-    element: EventsPage,
-    allowedRoles: ['student', 'startup', 'admin'],
+    element: EventsListPage,
+    allowedRoles: ['student', 'startup', 'admin', 'organizer', 'club'],
+  },
+  {
+    path: '/events/:eventId',
+    element: EventDetailPage,
+    allowedRoles: ['student', 'startup', 'admin', 'organizer', 'club'],
+  },
+  {
+    path: '/events/:eventId/manage',
+    element: EventAdminDashboardPage,
+    allowedRoles: ['admin', 'organizer', 'club'],
   },
   {
     path: '/profile',
@@ -36,7 +48,7 @@ const routes = [
   {
     path: '/lets-build',
     element: LetsBuildPage,
-    allowedRoles: ['student', 'startup', 'admin'],
+    allowedRoles: ['student', 'startup', 'admin', 'organizer', 'club'],
   },
 ];
 
