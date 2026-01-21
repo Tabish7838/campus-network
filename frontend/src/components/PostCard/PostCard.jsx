@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react';
 import Card from '../Card/Card.jsx';
+import CommentSection from '../CommentSection/CommentSection.jsx';
+import { getLikeInfo, toggleLike } from '../../services/like.api.js';
 import {
   formatName,
   formatRole,
@@ -14,11 +17,16 @@ const stageStyles = {
   default: 'bg-primary-light text-primary',
 };
 
-const ActionButton = ({ icon: Icon, label, onClick }) => (
+const ActionButton = ({ icon: Icon, label, onClick, disabled = false }) => (
   <button
     type="button"
     onClick={onClick}
-    className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted transition hover:bg-primary-light/60 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    disabled={disabled}
+    className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+      disabled 
+        ? 'text-muted/50 cursor-not-allowed' 
+        : 'text-muted hover:bg-primary-light/60 hover:text-primary'
+    }`}
   >
     <Icon className="h-4 w-4" aria-hidden="true" />
     <span>{label}</span>
@@ -39,12 +47,25 @@ const ShareIcon = (props) => (
   </svg>
 );
 
+const HeartIcon = ({ filled, ...props }) => (
+  <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
+
 const PostCard = ({ post }) => {
+  const [showComments, setShowComments] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+
   if (!post) {
     return null;
   }
 
   const {
+    id: postId,
+    post_id,
     authorProfile,
     title,
     description,
@@ -54,6 +75,7 @@ const PostCard = ({ post }) => {
     created_at: createdAt,
   } = post;
 
+  const actualPostId = postId || post_id;
   const displayName = formatName(authorProfile?.name);
   const role = formatRole(authorProfile?.role);
   const college = authorProfile?.college;
@@ -64,6 +86,72 @@ const PostCard = ({ post }) => {
   const stageBadgeClass = stageStyles[stage] || stageStyles.default;
 
   const hasImage = typeof imageUrl === 'string' && imageUrl.trim().length > 0;
+
+  // Load like info when component mounts
+  useEffect(() => {
+    if (actualPostId) {
+      loadLikeInfo();
+    }
+  }, [actualPostId]);
+
+  const loadLikeInfo = async () => {
+    try {
+      const likeInfo = await getLikeInfo(actualPostId);
+      setLikeCount(likeInfo.count);
+      setIsLiked(likeInfo.isLiked);
+    } catch (error) {
+      console.error('Error loading like info:', error);
+    }
+  };
+
+  const handleCommentClick = () => {
+    setShowComments(true);
+  };
+
+  const handleLikeClick = async () => {
+    if (likeLoading) return;
+
+    try {
+      setLikeLoading(true);
+      const result = await toggleLike(actualPostId);
+      setIsLiked(result.isLiked);
+      setLikeCount(result.likeCount);
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      alert('Failed to update like. Please try again.');
+    } finally {
+      setLikeLoading(false);
+    }
+  };
+
+  const handleShareClick = async () => {
+    const shareData = {
+      title: title,
+      text: `Check out this startup idea: ${title}`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        const shareText = `${title}\n\n${description}\n\n${window.location.href}`;
+        await navigator.clipboard.writeText(shareText);
+        alert('Post details copied to clipboard!');
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Final fallback: copy URL only
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      } catch (clipboardError) {
+        console.error('Clipboard error:', clipboardError);
+        alert('Unable to share. Please copy the URL manually.');
+      }
+    }
+  };
 
   return (
     <Card className="space-y-5">
@@ -120,10 +208,33 @@ const PostCard = ({ post }) => {
           {authorProfile?.college && <span>{authorProfile.college}</span>}
         </div>
         <div className="flex items-center gap-2">
-          <ActionButton icon={CommentIcon} label="Comment" />
-          <ActionButton icon={ShareIcon} label="Share" />
+          <ActionButton 
+            icon={({ className, ...props }) => (
+              <HeartIcon 
+                filled={isLiked} 
+                className={`${className} ${isLiked ? 'text-red-500' : ''}`} 
+                {...props} 
+              />
+            )}
+            label={`${likeCount} Like${likeCount !== 1 ? 's' : ''}`}
+            onClick={handleLikeClick}
+            disabled={likeLoading}
+          />
+          <ActionButton 
+            icon={CommentIcon} 
+            label={`Comment${post.comment_count ? ` (${post.comment_count.length || 0})` : ''}`} 
+            onClick={handleCommentClick} 
+          />
+          <ActionButton icon={ShareIcon} label="Share" onClick={handleShareClick} />
         </div>
       </div>
+
+      {/* Comment Section Modal */}
+      <CommentSection
+        postId={actualPostId}
+        isOpen={showComments}
+        onClose={() => setShowComments(false)}
+      />
     </Card>
   );
 };

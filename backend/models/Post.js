@@ -5,7 +5,9 @@ const Post = {
     let query = supabase.from('posts').select(`
       *,
       author:users(id, name, avatar_url),
-      collaborators:post_collaborators(user:users(id, name, avatar_url))
+      collaborators:post_collaborators(user:users(id, name, avatar_url)),
+      comment_count:comments(count),
+      like_count:likes(count)
     `);
 
     if (filters.stage) {
@@ -13,6 +15,25 @@ const Post = {
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
+  async findById(postId) {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        author:users(id, name, avatar_url),
+        collaborators:post_collaborators(user:users(id, name, avatar_url)),
+        comment_count:comments(count),
+        like_count:likes(count)
+      `)
+      .eq('id', postId)
+      .single();
 
     if (error) {
       throw new Error(error.message);

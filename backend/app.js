@@ -21,6 +21,8 @@ const hireRoutes = require('./routes/hire.routes.js');
 const eventRoutes = require('./routes/event.routes.js');
 const userRoutes = require('./routes/user.routes.js');
 const trustRoutes = require('./routes/trust.routes.js');
+const commentRoutes = require('./routes/comment.routes.js');
+const likeRoutes = require('./routes/like.routes.js');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/feed', feedRoutes);
@@ -29,5 +31,7 @@ app.use('/api/hire', hireRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/trust', trustRoutes);
+app.use('/api', commentRoutes);
+app.use('/api', likeRoutes);
 
 module.exports = app;
