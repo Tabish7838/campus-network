@@ -12,6 +12,12 @@ export const fetchEventResources = (eventId) => apiFetch(`/api/events/${eventId}
 
 export const fetchEventFaqs = (eventId) => apiFetch(`/api/events/${eventId}/faq`);
 
+export const joinEventTeam = (eventId, payload) =>
+  apiFetch(`/api/events/${eventId}/team`, {
+    method: 'POST',
+    data: payload,
+  });
+
 export const requestToJoinTeam = (eventId, teamId, payload) =>
   apiFetch(`/api/events/${eventId}/teams/${teamId}/requests`, {
     method: 'POST',

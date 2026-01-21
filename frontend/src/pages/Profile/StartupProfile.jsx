@@ -4,7 +4,7 @@ import Card from '../../components/Card/Card.jsx';
 import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
-import { getMe, endorsePeer, updateProfile, requestAdminUpgrade, requestStartupUpgrade } from '../../services/user.api.js';
+import { getMe, endorsePeer, updateProfile, requestStudentUpgrade } from '../../services/user.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useRole } from '../../context/RoleContext.jsx';
@@ -17,7 +17,7 @@ const tabConfig = [
   { key: 'startups', label: 'Startups Joined' },
 ];
 
-const StudentProfile = () => {
+const StartupProfile = () => {
   const { signOut } = useAuth();
   const { role, refreshRole } = useRole();
   const navigate = useNavigate();
@@ -37,20 +37,15 @@ const StudentProfile = () => {
   const [nameError, setNameError] = useState('');
   const [nameLoading, setNameLoading] = useState(false);
 
-  // Admin upgrade states
-  const [adminUpgradeLoading, setAdminUpgradeLoading] = useState(false);
-  const [adminUpgradeMessage, setAdminUpgradeMessage] = useState('');
-  const [adminUpgradeSuccess, setAdminUpgradeSuccess] = useState(false);
-
-  // Startup upgrade states
-  const [startupUpgradeLoading, setStartupUpgradeLoading] = useState(false);
-  const [startupUpgradeMessage, setStartupUpgradeMessage] = useState('');
-  const [startupUpgradeSuccess, setStartupUpgradeSuccess] = useState(false);
+  // Student upgrade states
+  const [studentUpgradeLoading, setStudentUpgradeLoading] = useState(false);
+  const [studentUpgradeMessage, setStudentUpgradeMessage] = useState('');
+  const [studentUpgradeSuccess, setStudentUpgradeSuccess] = useState(false);
 
   const getDisplayName = (currentProfile) => {
     if (currentProfile?.name) return currentProfile.name;
     if (currentProfile?.email) return currentProfile.email.split('@')[0];
-    return 'User';
+    return 'Startup';
   };
 
   const loadProfile = async () => {
@@ -203,8 +198,8 @@ const StudentProfile = () => {
             <div>
               <h3 className="mb-2 text-sm font-semibold text-body">About</h3>
               <p className="text-sm leading-relaxed text-muted">
-                {profile.bio ||
-                  'Add a short bio to tell others about your passions, projects, and what you are looking to build.'}
+                {profile.bio || profile.description ||
+                  'Startup profile - connect with talent, post opportunities, and grow your team through campus partnerships.'}
               </p>
             </div>
           </div>
@@ -230,16 +225,16 @@ const StudentProfile = () => {
     }
   };
 
-  const handleAdminUpgrade = async () => {
-    setAdminUpgradeLoading(true);
-    setAdminUpgradeMessage('');
-    setAdminUpgradeSuccess(false);
+  const handleStudentUpgrade = async () => {
+    setStudentUpgradeLoading(true);
+    setStudentUpgradeMessage('');
+    setStudentUpgradeSuccess(false);
     setError(null);
     
     try {
-      const response = await requestAdminUpgrade();
-      setAdminUpgradeMessage(response.message);
-      setAdminUpgradeSuccess(response.success);
+      const response = await requestStudentUpgrade();
+      setStudentUpgradeMessage(response.message);
+      setStudentUpgradeSuccess(response.success);
       
       if (response.success) {
         // Update the profile with the new role
@@ -252,39 +247,10 @@ const StudentProfile = () => {
         await loadProfile();
       }
     } catch (err) {
-      setAdminUpgradeMessage(err.message || 'Failed to process admin upgrade request');
-      setAdminUpgradeSuccess(false);
+      setStudentUpgradeMessage(err.message || 'Failed to process student upgrade request');
+      setStudentUpgradeSuccess(false);
     } finally {
-      setAdminUpgradeLoading(false);
-    }
-  };
-
-  const handleStartupUpgrade = async () => {
-    setStartupUpgradeLoading(true);
-    setStartupUpgradeMessage('');
-    setStartupUpgradeSuccess(false);
-    setError(null);
-    
-    try {
-      const response = await requestStartupUpgrade();
-      setStartupUpgradeMessage(response.message);
-      setStartupUpgradeSuccess(response.success);
-      
-      if (response.success) {
-        // Update the profile with the new role
-        setProfile(response.profile);
-        // Refresh the role context
-        if (refreshRole) {
-          await refreshRole();
-        }
-        // Reload the profile to get updated data
-        await loadProfile();
-      }
-    } catch (err) {
-      setStartupUpgradeMessage(err.message || 'Failed to process startup upgrade request');
-      setStartupUpgradeSuccess(false);
-    } finally {
-      setStartupUpgradeLoading(false);
+      setStudentUpgradeLoading(false);
     }
   };
 
@@ -325,7 +291,7 @@ const StudentProfile = () => {
                 <Badge variant="level">
                   Level {profile.level_badge || profile.level || formatLevel(profile.level) || 'Explorer'}
                 </Badge>
-                <Badge variant="primary">{profile.role?.toUpperCase()}</Badge>
+                <Badge variant="primary">STARTUP</Badge>
                 {typeof profile.xp_points === 'number' && <Badge variant="neutral">{profile.xp_points} XP</Badge>}
               </div>
               {!isEditingName ? (
@@ -390,38 +356,22 @@ const StudentProfile = () => {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {role === 'student' && (
-              <div className="flex flex-col items-end gap-2">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="rounded-full px-4"
-                  onClick={handleStartupUpgrade}
-                  disabled={startupUpgradeLoading}
-                >
-                  {startupUpgradeLoading ? <Loader size="sm" inline /> : 'Become a Startup'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="rounded-full px-4"
-                  onClick={handleAdminUpgrade}
-                  disabled={adminUpgradeLoading}
-                >
-                  {adminUpgradeLoading ? <Loader size="sm" inline /> : 'Become an Admin'}
-                </Button>
-                {startupUpgradeMessage && (
-                  <p className={`text-xs text-center ${startupUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
-                    {startupUpgradeMessage}
-                  </p>
-                )}
-                {adminUpgradeMessage && (
-                  <p className={`text-xs text-center ${adminUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
-                    {adminUpgradeMessage}
-                  </p>
-                )}
-              </div>
-            )}
+            <div className="flex flex-col items-end gap-2">
+              <Button
+                size="sm"
+                variant="primary"
+                className="rounded-full px-4"
+                onClick={handleStudentUpgrade}
+                disabled={studentUpgradeLoading}
+              >
+                {studentUpgradeLoading ? <Loader size="sm" inline /> : 'Become a Student'}
+              </Button>
+              {studentUpgradeMessage && (
+                <p className={`text-xs text-center ${studentUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
+                  {studentUpgradeMessage}
+                </p>
+              )}
+            </div>
             <Button variant="ghost" size="icon" onClick={signOut}>
               Log out
             </Button>
@@ -549,4 +499,4 @@ const StudentProfile = () => {
   );
 };
 
-export default StudentProfile;
+export default StartupProfile;

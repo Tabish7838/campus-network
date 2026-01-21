@@ -15,3 +15,18 @@ export const endorsePeer = (payload) =>
     method: 'POST',
     data: payload,
   });
+
+export const requestAdminUpgrade = () =>
+  apiFetch('/api/users/request-admin', {
+    method: 'POST',
+  });
+
+export const requestStartupUpgrade = () =>
+  apiFetch('/api/users/request-startup', {
+    method: 'POST',
+  });
+
+export const requestStudentUpgrade = () =>
+  apiFetch('/api/users/request-student', {
+    method: 'POST',
+  });

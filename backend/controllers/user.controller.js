@@ -70,8 +70,148 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const requestAdminUpgrade = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const ADMIN_UUID = '6ba34c09-da2b-4887-8a2e-d659463e274e';
+
+    // Check if the user's UUID matches the admin UUID
+    if (userId !== ADMIN_UUID) {
+      return res.status(403).json({ 
+        message: 'Access denied. You are not authorized to become an admin.',
+        success: false 
+      });
+    }
+
+    // Get current user profile
+    const userProfile = await User.findById(userId);
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    // Check if user is already an admin
+    if (userProfile.role === 'admin') {
+      return res.status(200).json({ 
+        message: 'You are already an admin!',
+        success: true,
+        profile: userProfile
+      });
+    }
+
+    // Update user role to admin
+    const updatedProfile = await User.updateProfile(userId, { role: 'admin' });
+
+    res.status(200).json({
+      message: 'Congratulations! You have been upgraded to admin.',
+      success: true,
+      profile: updatedProfile
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      message: `Error processing admin upgrade: ${error.message}`,
+      success: false 
+    });
+  }
+};
+
+const requestStartupUpgrade = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const ADMIN_UUID = '6ba34c09-da2b-4887-8a2e-d659463e274e';
+
+    // Get current user profile
+    const userProfile = await User.findById(userId);
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    // Check if user is already a startup
+    if (userProfile.role === 'startup') {
+      return res.status(200).json({ 
+        message: 'You are already registered as a startup!',
+        success: true,
+        profile: userProfile
+      });
+    }
+
+    // Prevent unauthorized admin accounts from changing roles
+    // Only the authorized admin UUID can switch roles freely
+    if (userProfile.role === 'admin' && userId !== ADMIN_UUID) {
+      return res.status(403).json({
+        message: 'Admin accounts cannot change roles.',
+        success: false
+      });
+    }
+
+    // Update user role to startup
+    const updatedProfile = await User.updateProfile(userId, { role: 'startup' });
+
+    res.status(200).json({
+      message: 'Congratulations! You have been upgraded to startup account.',
+      success: true,
+      profile: updatedProfile
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      message: `Error processing startup upgrade: ${error.message}`,
+      success: false 
+    });
+  }
+};
+
+const requestStudentUpgrade = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const ADMIN_UUID = '6ba34c09-da2b-4887-8a2e-d659463e274e';
+
+    // Get current user profile
+    const userProfile = await User.findById(userId);
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    // Check if user is already a student
+    if (userProfile.role === 'student') {
+      return res.status(200).json({ 
+        message: 'You are already registered as a student!',
+        success: true,
+        profile: userProfile
+      });
+    }
+
+    // Prevent unauthorized admin accounts from changing roles
+    // Only the authorized admin UUID can switch roles freely
+    if (userProfile.role === 'admin' && userId !== ADMIN_UUID) {
+      return res.status(403).json({
+        message: 'Admin accounts cannot change roles.',
+        success: false
+      });
+    }
+
+    // Update user role to student
+    const updatedProfile = await User.updateProfile(userId, { role: 'student' });
+
+    res.status(200).json({
+      message: 'Successfully switched to student account.',
+      success: true,
+      profile: updatedProfile
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      message: `Error processing student upgrade: ${error.message}`,
+      success: false 
+    });
+  }
+};
+
 module.exports = {
   getMyProfile,
   getProfileById,
   updateProfile,
+  requestAdminUpgrade,
+  requestStartupUpgrade,
+  requestStudentUpgrade,
 };
