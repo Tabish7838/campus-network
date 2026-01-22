@@ -47,50 +47,58 @@ const getProfileById = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { name, college, course, branch, year, role } = req.body;
-    
-    // Build update object with only provided fields
+    console.log("REQ BODY 👉", req.body);
+    console.log("RAW KEYS 👉", Object.keys(req.body));
+
+    const { name, college, course, branch, year, role, about, bio, skills } = req.body;
+
     const updateData = {};
+
     if (name !== undefined) updateData.name = name;
     if (college !== undefined) updateData.college = college;
     if (course !== undefined) updateData.course = course;
     if (branch !== undefined) updateData.branch = branch;
     if (year !== undefined) updateData.year = year;
-    
-    // Handle role updates with validation
+    if (skills !== undefined) updateData.skills = skills;
+    if (about !== undefined) updateData.about = about;
+    else if (bio !== undefined) updateData.about = bio;
+
+    console.log("UPDATE DATA 👉", updateData);
+
     if (role !== undefined) {
       const validRoles = ['student', 'startup', 'admin'];
       if (!validRoles.includes(role)) {
-        return res.status(400).json({ 
-          message: 'Invalid role. Valid roles are: student, startup, admin.' 
+        return res.status(400).json({
+          message: 'Invalid role. Valid roles are: student, startup, admin.'
         });
       }
-      
-      // Restrict admin role to specific UUID only
-      if (role === 'admin') {
-        const ADMIN_UUID = 'dc6cf991-7fbb-44de-ab35-aa014070914a';
-        if (req.user.id !== ADMIN_UUID) {
-          return res.status(403).json({ 
-            message: 'Access denied. You do not have permission to become an admin.' 
-          });
-        }
+
+      const ADMIN_UUID = 'dc6cf991-7fbb-44de-ab35-aa014070914a';
+      if (role === 'admin' && req.user.id !== ADMIN_UUID) {
+        return res.status(403).json({
+          message: 'Access denied. You do not have permission to become an admin.'
+        });
       }
-      
+
       updateData.role = role;
     }
 
-    // Ensure at least one field is being updated
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ message: 'No fields provided for update' });
     }
-    
-    const updatedProfile = await User.updateProfile(req.user.id, updateData);
+
+    const updatedProfile = await User.updateProfile(
+      req.user.id,
+      updateData,
+    );
 
     res.status(200).json(updatedProfile);
+
   } catch (error) {
     res.status(500).json({ message: `Error updating profile: ${error.message}` });
   }
 };
+
 
 const requestAdminUpgrade = async (req, res) => {
   try {
