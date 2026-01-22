@@ -14,11 +14,18 @@ const stageFilters = [
   { label: 'Scaling', value: 'Scaling' },
 ];
 
+const postTypes = [
+  { label: 'Startup Ideas', value: 'startup_idea' },
+  { label: 'Projects', value: 'project' },
+  { label: 'Work Updates', value: 'work_update' },
+];
+
 const initialFormState = {
   title: '',
   description: '',
   stage: 'Ideation',
   required_skills: '',
+  post_type: 'startup_idea',
 };
 
 const Home = () => {
@@ -27,6 +34,7 @@ const Home = () => {
   const [form, setForm] = useState(initialFormState);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [activePostType, setActivePostType] = useState('startup_idea');
 
   useEffect(() => {
     loadPosts('all');
@@ -46,12 +54,19 @@ const Home = () => {
     setFormLoading(true);
     setFormError(null);
     try {
-      await createFeedPost({
+      const postData = {
         title: form.title,
         description: form.description,
-        stage: form.stage,
-        required_skills: form.required_skills.split(',').map((skill) => skill.trim()).filter(Boolean),
-      });
+        post_type: form.post_type,
+      };
+
+      // Only add stage and skills for startup ideas and projects
+      if (form.post_type === 'startup_idea' || form.post_type === 'project') {
+        postData.stage = form.stage;
+        postData.required_skills = form.required_skills.split(',').map((skill) => skill.trim()).filter(Boolean);
+      }
+
+      await createFeedPost(postData);
       setShowForm(false);
       setForm(initialFormState);
       loadPosts(currentFilter || 'all');
@@ -62,51 +77,117 @@ const Home = () => {
     }
   };
 
+  const getFormTitle = () => {
+    switch (form.post_type) {
+      case 'startup_idea':
+        return 'Share a new startup idea';
+      case 'project':
+        return 'Share a new project';
+      case 'work_update':
+        return 'Share a work update';
+      default:
+        return 'Share a new post';
+    }
+  };
+
+  const getFormDescription = () => {
+    switch (form.post_type) {
+      case 'startup_idea':
+        return 'Highlight your startup idea to invite collaborators.';
+      case 'project':
+        return 'Share your project to find team members.';
+      case 'work_update':
+        return 'Update your network about your work progress.';
+      default:
+        return 'Share something with your network.';
+    }
+  };
+
+  const handlePostDeleted = (deletedPostId) => {
+    // Refresh the feed after a post is deleted
+    loadPosts(currentFilter || 'all');
+  };
+
   return (
     <div className="space-y-6">
       <header className="space-y-3">
-  {/* Top row */}
-  <div className="flex items-center justify-between">
-    <h1 className="text-xl font-semibold text-body">
-      Startup Ideas
-    </h1>
+        {/* Top row */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-body">
+            Feed
+          </h1>
 
-    <div className="flex items-center gap-2">
-      {/* Search icon */}
-      <button
-        className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-        aria-label="Search"
-      >
-        🔍
-      </button>
+          <div className="flex items-center gap-2">
+            {/* Search icon */}
+            <button
+              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              aria-label="Search"
+            >
+              🔍
+            </button>
 
-      {/* Add post */}
-      <Button
-        size="sm"
-        variant="primary"
-        onClick={() => setShowForm(true)}
-      >
-        Add
-      </Button>
-    </div>
-  </div>
+            {/* Add post */}
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setShowForm(true)}
+            >
+              Add
+            </Button>
+          </div>
+        </div>
 
-  {/* Search input */}
-  <input
-    type="text"
-    placeholder="Search ideas, projects, people"
-    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-  />
-</header>
+        {/* Post Type Tabs */}
+        <div className="flex gap-1 rounded-2xl bg-surface p-1">
+          {postTypes.map((type) => (
+            <button
+              key={type.value}
+              onClick={() => setActivePostType(type.value)}
+              className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition ${
+                activePostType === type.value
+                  ? 'bg-primary text-white'
+                  : 'text-muted hover:text-body'
+              }`}
+            >
+              {type.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search input */}
+        <input
+          type="text"
+          placeholder="Search ideas, projects, people"
+          className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+        />
+      </header>
 
 
       {showForm && (
         <Card className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold">Share a new idea</h2>
-            <p className="text-sm text-muted">Highlight your project to invite collaborators.</p>
+            <h2 className="text-lg font-semibold">{getFormTitle()}</h2>
+            <p className="text-sm text-muted">{getFormDescription()}</p>
           </div>
           <form className="space-y-4" onSubmit={handleCreatePost}>
+            {/* Post Type Selection */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted" htmlFor="post_type">
+                Post Type
+              </label>
+              <select
+                id="post_type"
+                name="post_type"
+                value={form.post_type}
+                onChange={handleFormChange}
+                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="startup_idea">Startup Ideas</option>
+                <option value="project">Projects</option>
+                <option value="work_update">Work Updates</option>
+              </select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-xs font-semibold text-muted" htmlFor="title">
                 Title
@@ -118,7 +199,13 @@ const Home = () => {
                 value={form.title}
                 onChange={handleFormChange}
                 className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g. AI Study Buddy"
+                placeholder={
+                  form.post_type === 'startup_idea' 
+                    ? 'e.g. AI Study Buddy' 
+                    : form.post_type === 'project'
+                    ? 'e.g. E-commerce Website'
+                    : 'e.g. Completed React Dashboard'
+                }
               />
             </div>
             <div className="space-y-2">
@@ -133,40 +220,51 @@ const Home = () => {
                 value={form.description}
                 onChange={handleFormChange}
                 className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Describe your idea, goals, and what you need"
+                placeholder={
+                  form.post_type === 'startup_idea'
+                    ? 'Describe your idea, goals, and what you need'
+                    : form.post_type === 'project'
+                    ? 'Describe your project, tech stack, and team needs'
+                    : 'Share your progress, achievements, or learnings'
+                }
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted" htmlFor="stage">
-                  Stage
-                </label>
-                <select
-                  id="stage"
-                  name="stage"
-                  value={form.stage}
-                  onChange={handleFormChange}
-                  className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="Ideation">Ideation</option>
-                  <option value="MVP">MVP</option>
-                  <option value="Scaling">Scaling</option>
-                </select>
+
+            {/* Conditional fields for startup ideas and projects */}
+            {(form.post_type === 'startup_idea' || form.post_type === 'project') && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-muted" htmlFor="stage">
+                    Stage
+                  </label>
+                  <select
+                    id="stage"
+                    name="stage"
+                    value={form.stage}
+                    onChange={handleFormChange}
+                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="Ideation">Ideation</option>
+                    <option value="MVP">MVP</option>
+                    <option value="Scaling">Scaling</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-muted" htmlFor="required_skills">
+                    Required Skills
+                  </label>
+                  <input
+                    id="required_skills"
+                    name="required_skills"
+                    value={form.required_skills}
+                    onChange={handleFormChange}
+                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Separate multiple skills with commas"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted" htmlFor="required_skills">
-                  Required Skills
-                </label>
-                <input
-                  id="required_skills"
-                  name="required_skills"
-                  value={form.required_skills}
-                  onChange={handleFormChange}
-                  className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Separate multiple skills with commas"
-                />
-              </div>
-            </div>
+            )}
+
             {formError && <p className="text-sm text-danger">{formError}</p>}
             <div className="flex justify-end gap-3">
               <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
@@ -193,7 +291,11 @@ const Home = () => {
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <PostCard key={post.post_id || post.id} post={post} />
+            <PostCard 
+              key={post.post_id || post.id} 
+              post={post} 
+              onPostDeleted={handlePostDeleted}
+            />
           ))}
 
           {!posts.length && (

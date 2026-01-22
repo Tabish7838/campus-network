@@ -3,9 +3,10 @@ import Card from '../../components/Card/Card.jsx';
 import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
-import { getMe, endorsePeer, updateProfile } from '../../services/user.api.js';
+import { getMe, endorsePeer, updateProfile, updateRole } from '../../services/user.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useRole } from '../../context/RoleContext.jsx';
 
 const tabConfig = [
   { key: 'about', label: 'About' },
@@ -15,6 +16,7 @@ const tabConfig = [
 
 const Profile = () => {
   const { signOut } = useAuth();
+  const { setRole } = useRole();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -28,6 +30,8 @@ const Profile = () => {
   const [nameInput, setNameInput] = useState('');
   const [nameError, setNameError] = useState('');
   const [nameLoading, setNameLoading] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(false);
+  const [roleError, setRoleError] = useState('');
 
   const getDisplayName = (profile) => {
   if (profile.name) return profile.name;
@@ -86,6 +90,47 @@ const handleSaveName = async () => {
     console.error('Error updating name:', error);
   } finally {
     setNameLoading(false);
+  }
+};
+
+const handleRoleSwitch = async (newRole) => {
+  if (profile.role === newRole) return; // No change needed
+  
+  try {
+    setRoleLoading(true);
+    setRoleError('');
+    
+    const updatedProfile = await updateRole(newRole);
+    setProfile(updatedProfile);
+    
+    // Immediately update the role context so navbar updates instantly
+    setRole(newRole);
+  } catch (error) {
+    setRoleError('Failed to update role. Please try again.');
+    console.error('Error updating role:', error);
+  } finally {
+    setRoleLoading(false);
+  }
+};
+
+const handleAdminSwitch = async () => {
+  if (profile.role === 'admin') return; // Already admin
+  
+  try {
+    setRoleLoading(true);
+    setRoleError('');
+    
+    const updatedProfile = await updateRole('admin');
+    setProfile(updatedProfile);
+    
+    // Immediately update the role context so navbar updates instantly
+    setRole('admin');
+  } catch (error) {
+    // Display the specific error message from the backend
+    setRoleError(error.message || 'Failed to switch to admin. Please try again.');
+    console.error('Error switching to admin:', error);
+  } finally {
+    setRoleLoading(false);
   }
 };
 
@@ -194,7 +239,7 @@ const handleSaveName = async () => {
             )}
           </div>
           <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <Badge variant="level">Level {profile.level_badge || profile.level}</Badge>
               <Badge variant="primary">{profile.role?.toUpperCase()}</Badge>
             </div>
@@ -271,9 +316,82 @@ const handleSaveName = async () => {
             </p>
             <p className="mt-3 text-sm text-muted">{profile.tagline || profile.headline || ''}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={signOut}>
-            Log out
-          </Button>
+          
+          {/* Role Switcher - replaces Post Jobs button position */}
+          <div className="flex flex-col gap-2">
+            {profile.role === 'student' ? (
+              <>
+                <Button 
+                  variant="primary" 
+                  size="sm"
+                  onClick={() => handleRoleSwitch('startup')}
+                  disabled={roleLoading}
+                  className="rounded-full px-4 py-1 text-xs"
+                >
+                  {roleLoading ? <Loader size="sm" inline /> : '🚀 Switch to Startup'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleAdminSwitch}
+                  disabled={roleLoading}
+                  className="rounded-full px-4 py-1 text-xs border border-border"
+                >
+                  {roleLoading ? <Loader size="sm" inline /> : '⚡ Switch to Admin'}
+                </Button>
+              </>
+            ) : profile.role === 'startup' ? (
+              <>
+                <Button 
+                  variant="primary" 
+                  size="sm"
+                  onClick={() => handleRoleSwitch('student')}
+                  disabled={roleLoading}
+                  className="rounded-full px-4 py-1 text-xs"
+                >
+                  {roleLoading ? <Loader size="sm" inline /> : '🎓 Switch to Student'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleAdminSwitch}
+                  disabled={roleLoading}
+                  className="rounded-full px-4 py-1 text-xs border border-border"
+                >
+                  {roleLoading ? <Loader size="sm" inline /> : '⚡ Switch to Admin'}
+                </Button>
+              </>
+            ) : profile.role === 'admin' ? (
+              <>
+                <Button 
+                  variant="primary" 
+                  size="sm"
+                  onClick={() => handleRoleSwitch('student')}
+                  disabled={roleLoading}
+                  className="rounded-full px-4 py-1 text-xs"
+                >
+                  {roleLoading ? <Loader size="sm" inline /> : '🎓 Switch to Student'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => handleRoleSwitch('startup')}
+                  disabled={roleLoading}
+                  className="rounded-full px-4 py-1 text-xs border border-border"
+                >
+                  {roleLoading ? <Loader size="sm" inline /> : '🚀 Switch to Startup'}
+                </Button>
+              </>
+            ) : null}
+            
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-xs">
+              Log out
+            </Button>
+            
+            {roleError && (
+              <p className="text-xs text-danger text-center">{roleError}</p>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">

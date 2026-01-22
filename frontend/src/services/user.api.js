@@ -10,6 +10,12 @@ export const updateProfile = (profileData) =>
     data: profileData,
   });
 
+export const updateRole = (role) =>
+  apiFetch('/api/users/profile', {
+    method: 'PUT',
+    data: { role },
+  });
+
 export const endorsePeer = (payload) =>
   apiFetch('/api/trust/endorse', {
     method: 'POST',
