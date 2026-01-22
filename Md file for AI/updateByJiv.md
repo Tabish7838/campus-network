@@ -12,10 +12,14 @@ Refactored the profile system to support role-based views with dedicated UIs for
   - Created new `AdminProfile.jsx` for admin/organizer-specific functionality
 
 ### Student Profile Enhancements
-- **Become an Admin CTA**: Added a prominent button for students to apply for admin/organizer status
+- **Become an Admin CTA**: Added a prominent button for students to apply for admin/organizer status with consistent styling as "Become a Startup"
 - **Profile Editing**: Improved name editing with validation and loading states
 - **Endorsements**: Enhanced UI for viewing and receiving peer endorsements
 - **Tab Navigation**: Organized content into logical sections (About, Skills, Teams, Events, Startups)
+- **Editable Skills**: Added inline editing for skills with add/remove functionality
+- **Editable About Section**: Implemented rich text editing for user bios with character limit validation
+- **Input Validation**: Prevents empty/duplicate skill entries and enforces character limits
+- **Optimized Updates**: Only sends changed data to the backend to reduce unnecessary API calls
 
 ### New Admin/Organizer Profile
 - **Organizer Branding**: Added support for organization logos, banners, and branding
@@ -65,6 +69,9 @@ Refactored the profile system to support role-based views with dedicated UIs for
 - ✅ Student profile with all existing functionality
 - ✅ Admin/Organizer profile with basic information
 - ✅ Responsive design for all components
+- ✅ Inline editing for Skills and About sections
+- ✅ Consistent CTA styling for role upgrade buttons
+- ✅ Input validation and change detection
 - ⏳ Admin application flow (in progress)
 - ⏳ Detailed admin analytics (planned)
 
