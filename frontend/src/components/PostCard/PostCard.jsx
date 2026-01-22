@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Card from '../Card/Card.jsx';
 import CommentSection from '../CommentSection/CommentSection.jsx';
 import { getLikeInfo, toggleLike } from '../../services/like.api.js';
+import { deleteFeedPost } from '../../services/feed.api.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import {
   formatName,
   formatRole,
@@ -47,17 +49,36 @@ const ShareIcon = (props) => (
   </svg>
 );
 
+const DeleteIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M3 6h18" />
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+  </svg>
+);
+
+const MoreIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="12" cy="5" r="1" />
+    <circle cx="12" cy="19" r="1" />
+  </svg>
+);
+
 const HeartIcon = ({ filled, ...props }) => (
   <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
   </svg>
 );
 
-const PostCard = ({ post }) => {
+const PostCard = ({ post, onPostDeleted }) => {
+  const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [showDeleteMenu, setShowDeleteMenu] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   if (!post) {
     return null;
@@ -66,6 +87,8 @@ const PostCard = ({ post }) => {
   const {
     id: postId,
     post_id,
+    author_id: authorId,
+    author,
     authorProfile,
     title,
     description,
@@ -76,9 +99,17 @@ const PostCard = ({ post }) => {
   } = post;
 
   const actualPostId = postId || post_id;
-  const displayName = formatName(authorProfile?.name);
-  const role = formatRole(authorProfile?.role);
-  const college = authorProfile?.college;
+  const isOwner = user && authorId && user.id === authorId;
+  
+  // Use author data from backend (author) or fallback to authorProfile
+  const authorData = author || authorProfile;
+  
+  // Debug: Log the author data to see what we're getting
+  console.log('Post author data:', { author, authorProfile, authorData, displayName: authorData?.name });
+  
+  const displayName = formatName(authorData?.name) || 'Anonymous User';
+  const role = formatRole(authorData?.role);
+  const college = authorData?.college;
   const headline = [role, college].filter(Boolean).join(' • ');
   const publishedTime = formatRelativeTime(createdAt);
   const skills = formatSkills(requiredSkills);
@@ -93,6 +124,18 @@ const PostCard = ({ post }) => {
       loadLikeInfo();
     }
   }, [actualPostId]);
+
+  // Close delete menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDeleteMenu && !event.target.closest('.delete-menu-container')) {
+        setShowDeleteMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDeleteMenu]);
 
   const loadLikeInfo = async () => {
     try {
@@ -153,6 +196,30 @@ const PostCard = ({ post }) => {
     }
   };
 
+  const handleDeleteClick = async () => {
+    if (!window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      await deleteFeedPost(actualPostId);
+      
+      // Call the callback to refresh the feed
+      if (onPostDeleted) {
+        onPostDeleted(actualPostId);
+      }
+      
+      alert('Post deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      alert('Failed to delete post. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteMenu(false);
+    }
+  };
+
   return (
     <Card className="space-y-5">
       <div className="flex items-start justify-between gap-4">
@@ -170,11 +237,40 @@ const PostCard = ({ post }) => {
             </p>
           </div>
         </div>
-        {stage && (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${stageBadgeClass}`}>
-            {stage}
-          </span>
-        )}
+        
+        <div className="flex items-center gap-2">
+          {stage && (
+            <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${stageBadgeClass}`}>
+              {stage}
+            </span>
+          )}
+          
+          {/* Delete menu for post owner */}
+          {isOwner && (
+            <div className="relative delete-menu-container">
+              <button
+                onClick={() => setShowDeleteMenu(!showDeleteMenu)}
+                className="rounded-full p-2 text-muted hover:bg-surface hover:text-body transition"
+                aria-label="Post options"
+              >
+                <MoreIcon className="h-4 w-4" />
+              </button>
+              
+              {showDeleteMenu && (
+                <div className="absolute right-0 top-full mt-1 z-10 bg-card border border-border rounded-xl shadow-lg py-1 min-w-[120px]">
+                  <button
+                    onClick={handleDeleteClick}
+                    disabled={deleteLoading}
+                    className="w-full px-4 py-2 text-left text-sm text-danger hover:bg-danger/10 transition flex items-center gap-2"
+                  >
+                    <DeleteIcon className="h-4 w-4" />
+                    {deleteLoading ? 'Deleting...' : 'Delete Post'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3 text-sm text-body">
@@ -198,14 +294,14 @@ const PostCard = ({ post }) => {
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-        {authorProfile?.branch && <span>Branch: {authorProfile.branch}</span>}
-        {authorProfile?.year && <span>Year {authorProfile.year}</span>}
+        {authorData?.branch && <span>Branch: {authorData.branch}</span>}
+        {authorData?.year && <span>Year {authorData.year}</span>}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-          {authorProfile?.course && <span>{authorProfile.course}</span>}
-          {authorProfile?.college && <span>{authorProfile.college}</span>}
+          {authorData?.course && <span>{authorData.course}</span>}
+          {authorData?.college && <span>{authorData.college}</span>}
         </div>
         <div className="flex items-center gap-2">
           <ActionButton 

@@ -4,7 +4,7 @@ const Post = {
   async findAll(filters = {}) {
     let query = supabase.from('posts').select(`
       *,
-      author:users(id, name, avatar_url),
+      author:users(id, name, avatar_url, role, college, course, branch, year),
       collaborators:post_collaborators(user:users(id, name, avatar_url)),
       comment_count:comments(count),
       like_count:likes(count)
@@ -27,7 +27,7 @@ const Post = {
       .from('posts')
       .select(`
         *,
-        author:users(id, name, avatar_url),
+        author:users(id, name, avatar_url, role, college, course, branch, year),
         collaborators:post_collaborators(user:users(id, name, avatar_url)),
         comment_count:comments(count),
         like_count:likes(count)
@@ -51,6 +51,22 @@ const Post = {
 
   async addCollaborator(postId, userId) {
     const { data, error } = await supabase.from('post_collaborators').insert({ post_id: postId, user_id: userId });
+    if (error) {
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
+  async delete(postId) {
+    const { data, error } = await supabase.from('posts').delete().eq('id', postId).select().single();
+    if (error) {
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
+  async findByAuthor(authorId) {
+    const { data, error } = await supabase.from('posts').select('*').eq('author_id', authorId);
     if (error) {
       throw new Error(error.message);
     }

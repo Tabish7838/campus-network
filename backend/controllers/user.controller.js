@@ -47,7 +47,7 @@ const getProfileById = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { name, college, course, branch, year } = req.body;
+    const { name, college, course, branch, year, role } = req.body;
     
     // Build update object with only provided fields
     const updateData = {};
@@ -56,6 +56,28 @@ const updateProfile = async (req, res) => {
     if (course !== undefined) updateData.course = course;
     if (branch !== undefined) updateData.branch = branch;
     if (year !== undefined) updateData.year = year;
+    
+    // Handle role updates with validation
+    if (role !== undefined) {
+      const validRoles = ['student', 'startup', 'admin'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ 
+          message: 'Invalid role. Valid roles are: student, startup, admin.' 
+        });
+      }
+      
+      // Restrict admin role to specific UUID only
+      if (role === 'admin') {
+        const ADMIN_UUID = 'dc6cf991-7fbb-44de-ab35-aa014070914a';
+        if (req.user.id !== ADMIN_UUID) {
+          return res.status(403).json({ 
+            message: 'Access denied. You do not have permission to become an admin.' 
+          });
+        }
+      }
+      
+      updateData.role = role;
+    }
 
     // Ensure at least one field is being updated
     if (Object.keys(updateData).length === 0) {

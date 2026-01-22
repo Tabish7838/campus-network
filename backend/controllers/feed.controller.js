@@ -29,8 +29,19 @@ const joinPostController = async (req, res) => {
   }
 };
 
+const deletePostController = async (req, res) => {
+  try {
+    const { id: postId } = req.params;
+    const result = await feedService.deletePost(postId, req.user.id);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getFeedController,
   createPostController,
   joinPostController,
+  deletePostController,
 };

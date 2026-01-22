@@ -37,6 +37,20 @@ const StudentProfile = () => {
   const [nameError, setNameError] = useState('');
   const [nameLoading, setNameLoading] = useState(false);
 
+  const [isEditingSkills, setIsEditingSkills] = useState(false);
+  const [skillsDraft, setSkillsDraft] = useState([]);
+  const [skillInputValue, setSkillInputValue] = useState('');
+  const [skillsError, setSkillsError] = useState('');
+  const [skillsLoading, setSkillsLoading] = useState(false);
+
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [bioInput, setBioInput] = useState('');
+  const [bioError, setBioError] = useState('');
+  const [bioLoading, setBioLoading] = useState(false);
+
+  const normalizeSkills = (skills) => skills.map((skill) => skill.trim()).filter(Boolean);
+  const skillsFingerprint = (skills) => normalizeSkills(skills).map((skill) => skill.toLowerCase()).sort().join('|');
+
   // Admin upgrade states
   const [adminUpgradeLoading, setAdminUpgradeLoading] = useState(false);
   const [adminUpgradeMessage, setAdminUpgradeMessage] = useState('');
@@ -73,6 +87,11 @@ const StudentProfile = () => {
   useEffect(() => {
     if (profile?.name) {
       setNameInput(profile.name);
+    }
+    if (profile) {
+      const nextSkills = Array.isArray(profile.skills) ? profile.skills : [];
+      setSkillsDraft(nextSkills);
+      setBioInput(profile.bio || '');
     }
   }, [profile]);
 
@@ -117,20 +136,190 @@ const StudentProfile = () => {
     if (Array.isArray(profile.events_attended_list)) return profile.events_attended_list;
     return [];
   }, [profile]);
+ 
+  const handleAddSkill = () => {
+    const trimmed = skillInputValue.trim();
+    if (!trimmed) {
+      setSkillsError('Skill cannot be empty');
+      return;
+    }
+    if (trimmed.length > 40) {
+      setSkillsError('Skill name is too long');
+      return;
+    }
+    if (skillsDraft.some((skill) => skill.toLowerCase() === trimmed.toLowerCase())) {
+      setSkillsError('Skill already added');
+      return;
+    }
+    setSkillsDraft((prev) => [...prev, trimmed]);
+    setSkillInputValue('');
+    setSkillsError('');
+  };
 
-  const tabContent = useMemo(() => {
+  const handleRemoveSkill = (skillToRemove) => {
+    setSkillsDraft((prev) => prev.filter((skill) => skill !== skillToRemove));
+  };
+
+  const handleSaveSkills = async () => {
+    const normalizedSkills = normalizeSkills(skillsDraft);
+    const previousSkills = Array.isArray(profile?.skills) ? profile.skills : [];
+
+    if (skillsFingerprint(normalizedSkills) === skillsFingerprint(previousSkills)) {
+      setSkillsError('No changes to save');
+      return;
+    }
+
+    setSkillsLoading(true);
+    setSkillsError('');
+    try {
+      const updatedProfile = await updateProfile({ skills: normalizedSkills });
+      setProfile(updatedProfile);
+      setIsEditingSkills(false);
+      const nextSkills = Array.isArray(updatedProfile?.skills) ? updatedProfile.skills : normalizedSkills;
+      setSkillsDraft(nextSkills);
+      setSkillInputValue('');
+    } catch (err) {
+      setSkillsError(err.message || 'Failed to update skills. Please try again.');
+    } finally {
+      setSkillsLoading(false);
+    }
+  };
+
+  const handleCancelSkillsEdit = () => {
+    setIsEditingSkills(false);
+    const resetSkills = Array.isArray(profile?.skills) ? profile.skills : [];
+    setSkillsDraft(resetSkills);
+    setSkillInputValue('');
+    setSkillsError('');
+  };
+
+  const handleSaveBio = async () => {
+    const trimmed = bioInput.trim();
+    const currentBio = profile?.bio || '';
+
+    if (trimmed === currentBio) {
+      setBioError('No changes to save');
+      return;
+    }
+
+    if (trimmed.length > 600) {
+      setBioError('Bio is too long (max 600 characters)');
+      return;
+    }
+    setBioLoading(true);
+    setBioError('');
+    try {
+      const updatedProfile = await updateProfile({ bio: trimmed });
+      setProfile(updatedProfile);
+      setIsEditingBio(false);
+      setBioInput(updatedProfile?.bio || trimmed);
+    } catch (err) {
+      setBioError(err.message || 'Failed to update about section. Please try again.');
+    } finally {
+      setBioLoading(false);
+    }
+  };
+
+  const handleCancelBioEdit = () => {
+    setIsEditingBio(false);
+    setBioInput(profile?.bio || '');
+    setBioError('');
+  };
+
+  const renderTabContent = () => {
     if (!profile) return null;
+
     switch (activeTab) {
       case 'skills':
         return (
-          <ul className="grid gap-2 text-sm text-muted">
-            {(profile.skills || []).map((skill) => (
-              <li key={skill} className="rounded-2xl bg-surface px-4 py-3 text-body">
-                {skill}
-              </li>
-            ))}
-            {!(profile.skills || []).length ? <p>No skills added yet.</p> : null}
-          </ul>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-body">Skills</h3>
+              {isEditingSkills ? null : (
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsEditingSkills(true);
+                    const nextSkills = Array.isArray(profile.skills) ? profile.skills : [];
+                    setSkillsDraft(nextSkills);
+                    setSkillInputValue('');
+                    setSkillsError('');
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
+
+            {isEditingSkills ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {skillsDraft.length ? (
+                    skillsDraft.map((skill) => (
+                      <span
+                        key={skill}
+                        className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm text-body"
+                      >
+                        {skill}
+                        <button
+                          type="button"
+                          className="text-xs text-danger"
+                          onClick={() => handleRemoveSkill(skill)}
+                          aria-label={`Remove ${skill}`}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted">No skills added yet.</p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    value={skillInputValue}
+                    onChange={(event) => {
+                      setSkillInputValue(event.target.value);
+                      setSkillsError('');
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        handleAddSkill();
+                      }
+                    }}
+                    placeholder="Add a skill and press enter"
+                    className="flex-1 min-w-[180px] rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <Button size="sm" variant="primary" onClick={handleAddSkill}>
+                    Add
+                  </Button>
+                </div>
+
+                {skillsError ? <p className="text-xs text-danger">{skillsError}</p> : null}
+
+                <div className="flex gap-2">
+                  <Button size="sm" variant="primary" onClick={handleSaveSkills} disabled={skillsLoading}>
+                    {skillsLoading ? <Loader size="sm" inline /> : 'Save skills'}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleCancelSkillsEdit} disabled={skillsLoading}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <ul className="grid gap-2 text-sm text-muted">
+                {(profile.skills || []).map((skill) => (
+                  <li key={skill} className="rounded-2xl bg-surface px-4 py-3 text-body">
+                    {skill}
+                  </li>
+                ))}
+                {!(profile.skills || []).length ? <p>No skills added yet.</p> : null}
+              </ul>
+            )}
+          </div>
         );
       case 'startups':
         return (
@@ -200,17 +389,48 @@ const StudentProfile = () => {
               </div>
             )}
 
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-body">About</h3>
-              <p className="text-sm leading-relaxed text-muted">
-                {profile.bio ||
-                  'Add a short bio to tell others about your passions, projects, and what you are looking to build.'}
-              </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-body">About</h3>
+                {isEditingBio ? null : (
+                  <Button size="xs" variant="ghost" onClick={() => setIsEditingBio(true)}>
+                    Edit
+                  </Button>
+                )}
+              </div>
+              {isEditingBio ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={bioInput}
+                    onChange={(event) => {
+                      setBioInput(event.target.value);
+                      setBioError('');
+                    }}
+                    rows={4}
+                    placeholder="Share your passions, projects, and what you're looking to build."
+                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {bioError ? <p className="text-xs text-danger">{bioError}</p> : null}
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="primary" onClick={handleSaveBio} disabled={bioLoading}>
+                      {bioLoading ? <Loader size="sm" inline /> : 'Save about'}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={handleCancelBioEdit} disabled={bioLoading}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed text-muted">
+                  {profile.bio ||
+                    'Add a short bio to tell others about your passions, projects, and what you are looking to build.'}
+                </p>
+              )}
             </div>
           </div>
         );
     }
-  }, [activeTab, profile, teamsJoined, eventsParticipated]);
+  };
 
   const handleEndorse = async (event) => {
     event.preventDefault();
@@ -403,7 +623,7 @@ const StudentProfile = () => {
                 </Button>
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="primary"
                   className="rounded-full px-4"
                   onClick={handleAdminUpgrade}
                   disabled={adminUpgradeLoading}
@@ -461,7 +681,7 @@ const StudentProfile = () => {
             </button>
           ))}
         </div>
-        <div>{tabContent}</div>
+        <div>{renderTabContent()}</div>
       </Card>
 
       <div className="space-y-6">

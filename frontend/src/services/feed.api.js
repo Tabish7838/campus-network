@@ -13,3 +13,8 @@ export const joinFeedPost = (postId, payload) =>
     method: 'POST',
     data: payload,
   });
+
+export const deleteFeedPost = (postId) =>
+  apiFetch(`/api/feed/posts/${postId}`, {
+    method: 'DELETE',
+  });
