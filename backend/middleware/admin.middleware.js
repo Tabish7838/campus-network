@@ -14,7 +14,7 @@ const adminMiddleware = async (req, res, next) => {
       throw new Error('Failed to fetch user role');
     }
 
-    if (data && (data.role === 'admin' || data.role === 'startup')) {
+    if (data && data.role === 'admin') {
       next();
     } else {
       res.status(403).json({ message: 'Forbidden: You do not have the required permissions' });

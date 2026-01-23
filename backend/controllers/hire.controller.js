@@ -2,7 +2,7 @@ const hiringService = require('../services/hiring.service');
 
 const postJobController = async (req, res) => {
   try {
-    // Assuming company_id is the user's id if they are a startup/admin
+    // Assuming company_id is the user's id if they are an admin
     const newJob = await hiringService.createJob(req.user.id, req.body);
     res.status(201).json(newJob);
   } catch (error) {

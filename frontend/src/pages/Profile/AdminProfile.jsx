@@ -14,7 +14,6 @@ const tabConfig = [
   { key: 'skills', label: 'Skills' },
   { key: 'teams', label: 'Teams Joined' },
   { key: 'events', label: 'Events' },
-  { key: 'startups', label: 'Startups Joined' },
 ];
 
 const AdminProfile = () => {
@@ -102,7 +101,6 @@ const AdminProfile = () => {
   const teamsJoined = useMemo(() => {
     if (!profile) return [];
     if (Array.isArray(profile.teams_joined)) return profile.teams_joined;
-    if (Array.isArray(profile.startups_joined)) return profile.startups_joined;
     return [];
   }, [profile]);
 
@@ -126,18 +124,6 @@ const AdminProfile = () => {
               </li>
             ))}
             {!(profile.skills || []).length ? <p>No skills added yet.</p> : null}
-          </ul>
-        );
-      case 'startups':
-        return (
-          <ul className="grid gap-3 text-sm text-muted">
-            {(profile.startups_joined || []).map((startup) => (
-              <li key={startup.id || startup} className="rounded-2xl border border-border bg-card p-4 text-body">
-                <p className="font-semibold">{startup.name || startup}</p>
-                {startup.role ? <p className="text-xs text-muted">Role: {startup.role}</p> : null}
-              </li>
-            ))}
-            {!(profile.startups_joined || []).length ? <p>No startups joined yet.</p> : null}
           </ul>
         );
       case 'teams':
@@ -200,7 +186,7 @@ const AdminProfile = () => {
               <h3 className="mb-2 text-sm font-semibold text-body">About</h3>
               <p className="text-sm leading-relaxed text-muted">
                 {profile.bio || profile.description ||
-                  'Admin profile - manage events, oversee activities, and support the campus startup ecosystem.'}
+                  'Admin profile - manage events, oversee activities, and support the campus ecosystem.'}
               </p>
             </div>
           </div>

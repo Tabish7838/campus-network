@@ -93,7 +93,7 @@ const Internships = () => {
       <header>
         <h1 className="text-2xl font-semibold text-body">Internships</h1>
         <p className="mt-1 text-sm text-muted">
-          Discover startup opportunities tailored to your skills and interests.
+          Discover opportunities tailored to your skills and interests.
         </p>
       </header>
 
@@ -115,7 +115,7 @@ const Internships = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-lg font-semibold text-body">{job.role_title}</h3>
-                    <p className="mt-1 text-sm text-muted">{job.startup_name || job.company_name}</p>
+                    <p className="mt-1 text-sm text-muted">{job.company_name}</p>
                   </div>
                   <Badge variant="neutral" className="capitalize">
                     {job.type}
@@ -158,7 +158,7 @@ const Internships = () => {
               <div>
                 <h2 className="text-xl font-semibold text-body">{selectedJob.role_title}</h2>
                 <p className="mt-1 text-sm text-muted">
-                  {selectedJob.startup_name || selectedJob.company_name}
+                  {selectedJob.company_name}
                 </p>
               </div>
               <div className="space-y-3 text-sm text-muted">

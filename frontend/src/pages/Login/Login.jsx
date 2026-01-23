@@ -58,7 +58,7 @@ const Login = () => {
             {isSignUp ? 'Create your Account' : 'Welcome Back'}
           </h1>
           <p className="mt-2 text-sm text-muted">
-            {isSignUp ? 'Join your campus startup network.' : 'Sign in to continue.'}
+            {isSignUp ? 'Join your campus network.' : 'Sign in to continue.'}
           </p>
         </div>
 

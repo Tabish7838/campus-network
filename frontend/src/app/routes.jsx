@@ -13,7 +13,7 @@ const routes = [
   {
     path: '/',
     element: HomePage,
-    allowedRoles: ['student', 'startup', 'admin', 'organizer', 'club'],
+    allowedRoles: ['student', 'admin', 'organizer', 'club'],
   },
   {
     path: '/internships',
@@ -23,17 +23,17 @@ const routes = [
   {
     path: '/hire',
     element: HirePage,
-    allowedRoles: ['startup', 'admin'],
+    allowedRoles: ['admin'],
   },
   {
     path: '/events',
     element: EventsListPage,
-    allowedRoles: ['student', 'startup', 'admin', 'organizer', 'club'],
+    allowedRoles: ['student', 'admin', 'organizer', 'club'],
   },
   {
     path: '/events/:eventId',
     element: EventDetailPage,
-    allowedRoles: ['student', 'startup', 'admin', 'organizer', 'club'],
+    allowedRoles: ['student', 'admin', 'organizer', 'club'],
   },
   {
     path: '/events/:eventId/manage',
@@ -43,12 +43,12 @@ const routes = [
   {
     path: '/profile',
     element: ProfilePage,
-    allowedRoles: ['student', 'startup', 'admin'],
+    allowedRoles: ['student', 'admin'],
   },
   {
     path: '/lets-build',
     element: LetsBuildPage,
-    allowedRoles: ['student', 'startup', 'admin', 'organizer', 'club'],
+    allowedRoles: ['student', 'admin', 'organizer', 'club'],
   },
 ];
 

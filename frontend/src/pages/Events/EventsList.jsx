@@ -90,7 +90,7 @@ const EventsList = () => {
       <header className="space-y-3">
         <div>
           <h1 className="text-2xl font-semibold text-body">Campus Events</h1>
-          <p className="text-sm text-muted">Discover hackathons, workshops, and startup challenges curated for your campus.</p>
+          <p className="text-sm text-muted">Discover hackathons, workshops, and challenges curated for your campus.</p>
         </div>
 
         <div className="flex flex-col gap-3 rounded-3xl bg-card p-4 shadow-sm">

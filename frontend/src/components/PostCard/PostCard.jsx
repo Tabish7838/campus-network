@@ -233,7 +233,7 @@ const PostCard = ({ post, onPostDeleted }) => {
               {publishedTime && <span className="text-xs text-muted">• {publishedTime}</span>}
             </div>
             <p className="text-xs text-muted">
-              {headline || 'Campus Startup Network member'}
+              {headline || 'Campus Network member'}
             </p>
           </div>
         </div>

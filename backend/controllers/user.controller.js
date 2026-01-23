@@ -66,10 +66,10 @@ const updateProfile = async (req, res) => {
     console.log("UPDATE DATA 👉", updateData);
 
     if (role !== undefined) {
-      const validRoles = ['student', 'startup', 'admin'];
+      const validRoles = ['student', 'admin'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({
-          message: 'Invalid role. Valid roles are: student, startup, admin.'
+          message: 'Invalid role. Valid roles are: student, admin.'
         });
       }
 
@@ -145,52 +145,6 @@ const requestAdminUpgrade = async (req, res) => {
   }
 };
 
-const requestStartupUpgrade = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const ADMIN_UUID = '6ba34c09-da2b-4887-8a2e-d659463e274e';
-
-    // Get current user profile
-    const userProfile = await User.findById(userId);
-    if (!userProfile) {
-      return res.status(404).json({ message: 'User profile not found' });
-    }
-
-    // Check if user is already a startup
-    if (userProfile.role === 'startup') {
-      return res.status(200).json({ 
-        message: 'You are already registered as a startup!',
-        success: true,
-        profile: userProfile
-      });
-    }
-
-    // Prevent unauthorized admin accounts from changing roles
-    // Only the authorized admin UUID can switch roles freely
-    if (userProfile.role === 'admin' && userId !== ADMIN_UUID) {
-      return res.status(403).json({
-        message: 'Admin accounts cannot change roles.',
-        success: false
-      });
-    }
-
-    // Update user role to startup
-    const updatedProfile = await User.updateProfile(userId, { role: 'startup' });
-
-    res.status(200).json({
-      message: 'Congratulations! You have been upgraded to startup account.',
-      success: true,
-      profile: updatedProfile
-    });
-
-  } catch (error) {
-    res.status(500).json({ 
-      message: `Error processing startup upgrade: ${error.message}`,
-      success: false 
-    });
-  }
-};
-
 const requestStudentUpgrade = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -242,6 +196,5 @@ module.exports = {
   getProfileById,
   updateProfile,
   requestAdminUpgrade,
-  requestStartupUpgrade,
   requestStudentUpgrade,
 };

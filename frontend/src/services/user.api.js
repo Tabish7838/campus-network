@@ -27,11 +27,6 @@ export const requestAdminUpgrade = () =>
     method: 'POST',
   });
 
-export const requestStartupUpgrade = () =>
-  apiFetch('/api/users/request-startup', {
-    method: 'POST',
-  });
-
 export const requestStudentUpgrade = () =>
   apiFetch('/api/users/request-student', {
     method: 'POST',

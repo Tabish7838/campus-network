@@ -2,7 +2,6 @@ import Loader from '../../components/Loader/Loader.jsx';
 import { useRole } from '../../context/RoleContext.jsx';
 import StudentProfile from './StudentProfile.jsx';
 import AdminProfile from './AdminProfile.jsx';
-import StartupProfile from './StartupProfile.jsx';
 
 const Profile = () => {
   const { role, roleLoading } = useRole();
@@ -17,10 +16,6 @@ const Profile = () => {
 
   if (role === 'admin' || role === 'organizer' || role === 'club') {
     return <AdminProfile />;
-  }
-
-  if (role === 'startup') {
-    return <StartupProfile />;
   }
 
   return <StudentProfile />;

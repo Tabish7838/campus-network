@@ -4,7 +4,7 @@ const hireController = require('../controllers/hire.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 const adminMiddleware = require('../middleware/admin.middleware');
 
-// Protect all hire routes with both auth and admin/startup role check
+// Protect all hire routes with auth and admin role check
 router.use(authMiddleware, adminMiddleware);
 
 router.post('/jobs', hireController.postJobController);

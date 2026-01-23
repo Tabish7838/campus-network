@@ -4,7 +4,7 @@ import Card from '../../components/Card/Card.jsx';
 import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
-import { getMe, endorsePeer, updateProfile, requestAdminUpgrade, requestStartupUpgrade } from '../../services/user.api.js';
+import { getMe, endorsePeer, updateProfile, requestAdminUpgrade } from '../../services/user.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useRole } from '../../context/RoleContext.jsx';
@@ -14,7 +14,6 @@ const tabConfig = [
   { key: 'skills', label: 'Skills' },
   { key: 'teams', label: 'Teams Joined' },
   { key: 'events', label: 'Events' },
-  { key: 'startups', label: 'Startups Joined' },
 ];
 
 const StudentProfile = () => {
@@ -55,11 +54,6 @@ const StudentProfile = () => {
   const [adminUpgradeLoading, setAdminUpgradeLoading] = useState(false);
   const [adminUpgradeMessage, setAdminUpgradeMessage] = useState('');
   const [adminUpgradeSuccess, setAdminUpgradeSuccess] = useState(false);
-
-  // Startup upgrade states
-  const [startupUpgradeLoading, setStartupUpgradeLoading] = useState(false);
-  const [startupUpgradeMessage, setStartupUpgradeMessage] = useState('');
-  const [startupUpgradeSuccess, setStartupUpgradeSuccess] = useState(false);
 
   const getDisplayName = (currentProfile) => {
     if (currentProfile?.name) return currentProfile.name;
@@ -126,7 +120,6 @@ const StudentProfile = () => {
   const teamsJoined = useMemo(() => {
     if (!profile) return [];
     if (Array.isArray(profile.teams_joined)) return profile.teams_joined;
-    if (Array.isArray(profile.startups_joined)) return profile.startups_joined;
     return [];
   }, [profile]);
 
@@ -321,18 +314,6 @@ const StudentProfile = () => {
             )}
           </div>
         );
-      case 'startups':
-        return (
-          <ul className="grid gap-3 text-sm text-muted">
-            {(profile.startups_joined || []).map((startup) => (
-              <li key={startup.id || startup} className="rounded-2xl border border-border bg-card p-4 text-body">
-                <p className="font-semibold">{startup.name || startup}</p>
-                {startup.role ? <p className="text-xs text-muted">Role: {startup.role}</p> : null}
-              </li>
-            ))}
-            {!(profile.startups_joined || []).length ? <p>No startups joined yet.</p> : null}
-          </ul>
-        );
       case 'teams':
         return (
           <div className="space-y-3 text-sm text-muted">
@@ -479,35 +460,6 @@ const StudentProfile = () => {
     }
   };
 
-  const handleStartupUpgrade = async () => {
-    setStartupUpgradeLoading(true);
-    setStartupUpgradeMessage('');
-    setStartupUpgradeSuccess(false);
-    setError(null);
-    
-    try {
-      const response = await requestStartupUpgrade();
-      setStartupUpgradeMessage(response.message);
-      setStartupUpgradeSuccess(response.success);
-      
-      if (response.success) {
-        // Update the profile with the new role
-        setProfile(response.profile);
-        // Refresh the role context
-        if (refreshRole) {
-          await refreshRole();
-        }
-        // Reload the profile to get updated data
-        await loadProfile();
-      }
-    } catch (err) {
-      setStartupUpgradeMessage(err.message || 'Failed to process startup upgrade request');
-      setStartupUpgradeSuccess(false);
-    } finally {
-      setStartupUpgradeLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -616,25 +568,11 @@ const StudentProfile = () => {
                   size="sm"
                   variant="primary"
                   className="rounded-full px-4"
-                  onClick={handleStartupUpgrade}
-                  disabled={startupUpgradeLoading}
-                >
-                  {startupUpgradeLoading ? <Loader size="sm" inline /> : 'Become a Startup'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="rounded-full px-4"
                   onClick={handleAdminUpgrade}
                   disabled={adminUpgradeLoading}
                 >
                   {adminUpgradeLoading ? <Loader size="sm" inline /> : 'Become an Admin'}
                 </Button>
-                {startupUpgradeMessage && (
-                  <p className={`text-xs text-center ${startupUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
-                    {startupUpgradeMessage}
-                  </p>
-                )}
                 {adminUpgradeMessage && (
                   <p className={`text-xs text-center ${adminUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
                     {adminUpgradeMessage}

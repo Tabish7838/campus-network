@@ -227,7 +227,7 @@ const Hire = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-body">{job.role_title}</h3>
-                      <p className="mt-1 text-sm text-muted">{job.company_name || job.startup_name}</p>
+                      <p className="mt-1 text-sm text-muted">{job.company_name}</p>
                     </div>
                     <Badge variant="neutral" className="capitalize">
                       {job.type}

@@ -7,7 +7,6 @@ router.get('/me', authMiddleware, userController.getMyProfile);
 router.get('/profile/:id', authMiddleware, userController.getProfileById);
 router.put('/profile', authMiddleware, userController.updateProfile);
 router.post('/request-admin', authMiddleware, userController.requestAdminUpgrade);
-router.post('/request-startup', authMiddleware, userController.requestStartupUpgrade);
 router.post('/request-student', authMiddleware, userController.requestStudentUpgrade);
 
 module.exports = router;
