@@ -6,6 +6,7 @@ const HirePage = lazy(() => import('../pages/Hire/Hire.jsx'));
 const EventsListPage = lazy(() => import('../pages/Events/EventsList.jsx'));
 const EventDetailPage = lazy(() => import('../pages/Events/EventDetail.jsx'));
 const EventAdminDashboardPage = lazy(() => import('../pages/Events/EventAdminDashboard.jsx'));
+const AdminStartupsDashboardPage = lazy(() => import('../pages/AdminStartups/AdminStartupsDashboard.jsx'));
 const ProfilePage = lazy(() => import('../pages/Profile/Profile.jsx'));
 const LetsBuildPage = lazy(() => import('../pages/LetsBuild/LetsBuild.jsx'));
 
@@ -39,6 +40,11 @@ const routes = [
     path: '/events/:eventId/manage',
     element: EventAdminDashboardPage,
     allowedRoles: ['admin', 'organizer', 'club'],
+  },
+  {
+    path: '/admin/startups',
+    element: AdminStartupsDashboardPage,
+    allowedRoles: ['admin'],
   },
   {
     path: '/profile',

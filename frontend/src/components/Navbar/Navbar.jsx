@@ -6,6 +6,7 @@ const navItems = [
   { to: '/', label: 'Home', icon: '🏠', roles: ['student', 'admin'] },
   { to: '/internships', label: 'Internships', icon: '🎓', roles: ['student'] },
   { to: '/hire', label: 'Hire', icon: '🧑‍💼', roles: ['admin'] },
+  { to: '/admin/startups', label: 'Startups', icon: '🚀', roles: ['admin'] },
   { to: '/events', label: 'Events', icon: '🎉', roles: ['student', 'admin'] },
   { to: '/profile', label: 'Profile', icon: '👤', roles: ['student', 'admin'] },
 ];

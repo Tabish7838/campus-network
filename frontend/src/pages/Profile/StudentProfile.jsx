@@ -5,6 +5,7 @@ import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
 import { getMe, endorsePeer, updateProfile, requestAdminUpgrade } from '../../services/user.api.js';
+import { createStartup, getMyStartup } from '../../services/startup.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useRole } from '../../context/RoleContext.jsx';
@@ -47,6 +48,26 @@ const StudentProfile = () => {
   const [bioError, setBioError] = useState('');
   const [bioLoading, setBioLoading] = useState(false);
 
+  const [startupLoading, setStartupLoading] = useState(false);
+  const [startupError, setStartupError] = useState('');
+  const [startupStatus, setStartupStatus] = useState('NONE');
+  const [startupStatusMessage, setStartupStatusMessage] = useState('');
+  const [startupReapplyAfter, setStartupReapplyAfter] = useState(null);
+  const [myStartup, setMyStartup] = useState(null);
+  const [startupLoadedOnce, setStartupLoadedOnce] = useState(false);
+
+  const [startupName, setStartupName] = useState('');
+  const [startupProblem, setStartupProblem] = useState('');
+  const [startupDomain, setStartupDomain] = useState('');
+  const [startupStage, setStartupStage] = useState('IDEA');
+  const [startupTotalMembers, setStartupTotalMembers] = useState('');
+  const [startupHeadName, setStartupHeadName] = useState('');
+  const [startupHeadEmail, setStartupHeadEmail] = useState('');
+  const [startupRevenue, setStartupRevenue] = useState(false);
+  const [startupActive, setStartupActive] = useState(true);
+  const [startupSubmitLoading, setStartupSubmitLoading] = useState(false);
+  const [startupSubmitError, setStartupSubmitError] = useState('');
+
   const normalizeSkills = (skills) => skills.map((skill) => skill.trim()).filter(Boolean);
   const skillsFingerprint = (skills) => normalizeSkills(skills).map((skill) => skill.toLowerCase()).sort().join('|');
 
@@ -78,6 +99,66 @@ const StudentProfile = () => {
     loadProfile();
   }, []);
 
+  const tabsToRender = useMemo(() => {
+    if (role === 'student') {
+      return [...tabConfig, { key: 'startup', label: 'Add Your Startup' }];
+    }
+    return tabConfig;
+  }, [role]);
+
+  useEffect(() => {
+    if (role !== 'student' && activeTab === 'startup') {
+      setActiveTab('about');
+    }
+  }, [role, activeTab]);
+
+  useEffect(() => {
+    if (role !== 'student') return;
+    if (activeTab !== 'startup') return;
+    if (startupLoadedOnce) return;
+
+    const loadStartup = async () => {
+      setStartupLoading(true);
+      setStartupError('');
+      try {
+        const data = await getMyStartup();
+        if (!data) {
+          setStartupStatus('NONE');
+          setStartupStatusMessage('');
+          setStartupReapplyAfter(null);
+          setMyStartup(null);
+        } else if (data?.status === 'APPROVED') {
+          setStartupStatus('APPROVED');
+          setStartupStatusMessage('');
+          setStartupReapplyAfter(null);
+          setMyStartup(data?.startup || null);
+        } else if (data?.status === 'PENDING') {
+          setStartupStatus('PENDING');
+          setStartupStatusMessage(data?.message || 'Application submitted. Please stay tuned for updates.');
+          setStartupReapplyAfter(null);
+          setMyStartup(null);
+        } else if (data?.status === 'REJECTED') {
+          setStartupStatus('REJECTED');
+          setStartupStatusMessage(data?.message || 'Your application was denied.');
+          setStartupReapplyAfter(data?.reapply_after || null);
+          setMyStartup(null);
+        } else {
+          setStartupStatus('NONE');
+          setStartupStatusMessage('');
+          setStartupReapplyAfter(null);
+          setMyStartup(null);
+        }
+      } catch (err) {
+        setStartupError(err.message || 'Unable to load your startup');
+      } finally {
+        setStartupLoadedOnce(true);
+        setStartupLoading(false);
+      }
+    };
+
+    loadStartup();
+  }, [activeTab, role, startupLoadedOnce]);
+
   useEffect(() => {
     if (profile?.name) {
       setNameInput(profile.name);
@@ -85,7 +166,7 @@ const StudentProfile = () => {
     if (profile) {
       const nextSkills = Array.isArray(profile.skills) ? profile.skills : [];
       setSkillsDraft(nextSkills);
-      setBioInput(profile.bio || '');
+      setBioInput(profile.bio || profile.about || '');
     }
   }, [profile]);
 
@@ -188,7 +269,7 @@ const StudentProfile = () => {
 
   const handleSaveBio = async () => {
     const trimmed = bioInput.trim();
-    const currentBio = profile?.bio || '';
+    const currentBio = profile?.bio || profile?.about || '';
 
     if (trimmed === currentBio) {
       setBioError('No changes to save');
@@ -205,7 +286,7 @@ const StudentProfile = () => {
       const updatedProfile = await updateProfile({ bio: trimmed });
       setProfile(updatedProfile);
       setIsEditingBio(false);
-      setBioInput(updatedProfile?.bio || trimmed);
+      setBioInput(updatedProfile?.bio || updatedProfile?.about || trimmed);
     } catch (err) {
       setBioError(err.message || 'Failed to update about section. Please try again.');
     } finally {
@@ -215,14 +296,343 @@ const StudentProfile = () => {
 
   const handleCancelBioEdit = () => {
     setIsEditingBio(false);
-    setBioInput(profile?.bio || '');
+    setBioInput(profile?.bio || profile?.about || '');
     setBioError('');
+  };
+
+  const handleCreateStartup = async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      name: startupName.trim(),
+      problem: startupProblem.trim(),
+      domain: startupDomain.trim(),
+      stage: startupStage,
+      total_members: startupTotalMembers === '' ? null : Number(startupTotalMembers),
+      head_name: startupHeadName.trim(),
+      head_email: startupHeadEmail.trim(),
+      revenue: Boolean(startupRevenue),
+      active: Boolean(startupActive),
+    };
+
+    if (!payload.name) {
+      setStartupSubmitError('Startup name is required');
+      return;
+    }
+    if (!payload.problem) {
+      setStartupSubmitError('Problem statement is required');
+      return;
+    }
+    if (!payload.domain) {
+      setStartupSubmitError('Domain is required');
+      return;
+    }
+    if (!payload.stage) {
+      setStartupSubmitError('Stage is required');
+      return;
+    }
+    if (!payload.head_name) {
+      setStartupSubmitError('Head name is required');
+      return;
+    }
+    if (!payload.head_email) {
+      setStartupSubmitError('Head email is required');
+      return;
+    }
+
+    setStartupSubmitLoading(true);
+    setStartupSubmitError('');
+    try {
+      const response = await createStartup(payload);
+      setStartupStatus(response?.status || 'PENDING');
+      setStartupStatusMessage(response?.message || 'Application submitted. Please stay tuned for updates.');
+      setStartupReapplyAfter(null);
+      setMyStartup(null);
+      setStartupLoadedOnce(true);
+    } catch (err) {
+      setStartupSubmitError(err.message || 'Failed to create startup');
+    } finally {
+      setStartupSubmitLoading(false);
+    }
   };
 
   const renderTabContent = () => {
     if (!profile) return null;
 
     switch (activeTab) {
+      case 'startup':
+        if (role !== 'student') {
+          return null;
+        }
+
+        if (startupLoading) {
+          return (
+            <div className="py-6">
+              <Loader label="Loading startup" />
+            </div>
+          );
+        }
+
+        if (startupError) {
+          return (
+            <Card className="border border-danger/20 bg-danger/5 text-danger">
+              <p className="text-sm">{startupError}</p>
+            </Card>
+          );
+        }
+
+        const reapplyDate = startupReapplyAfter ? new Date(startupReapplyAfter) : null;
+        const isReapplyLocked =
+          startupStatus === 'REJECTED' && reapplyDate && !Number.isNaN(reapplyDate.getTime()) && new Date() <= reapplyDate;
+
+        if (startupStatus === 'PENDING') {
+          return (
+            <Card className="space-y-2 border border-border bg-card p-4">
+              <Badge variant="neutral">PENDING</Badge>
+              <p className="text-sm text-body">{startupStatusMessage || 'Application submitted. Please stay tuned for updates.'}</p>
+            </Card>
+          );
+        }
+
+        if (startupStatus === 'REJECTED' && isReapplyLocked) {
+          return (
+            <Card className="space-y-2 border border-border bg-card p-4">
+              <Badge variant="neutral">REJECTED</Badge>
+              <p className="text-sm text-body">{startupStatusMessage || 'Your application was denied.'}</p>
+              <p className="text-xs text-muted">You can reapply after {reapplyDate.toLocaleString()}.</p>
+            </Card>
+          );
+        }
+
+        if (startupStatus === 'APPROVED' && myStartup) {
+          return (
+            <div className="space-y-4">
+              <Card className="space-y-3 border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold text-body">{myStartup.name}</p>
+                    <p className="mt-1 text-xs text-muted">{myStartup.domain || '—'}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {myStartup.stage ? <Badge variant="neutral">{myStartup.stage}</Badge> : null}
+                    <Badge variant={myStartup.active ? 'success' : 'neutral'}>{myStartup.active ? 'Active' : 'Inactive'}</Badge>
+                    <Badge variant={myStartup.revenue ? 'primary' : 'neutral'}>
+                      {myStartup.revenue ? 'Revenue' : 'No Revenue'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <p className="text-xs font-semibold text-muted">What are you solving?</p>
+                    <p className="mt-1 text-sm text-body">{myStartup.problem || '—'}</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-semibold text-muted">Total Members</p>
+                      <p className="mt-1 text-sm text-body">{myStartup.total_members ?? '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted">Head</p>
+                      <p className="mt-1 text-sm text-body">{myStartup.head_name || '—'}</p>
+                      <p className="text-xs text-muted">{myStartup.head_email || ''}</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+              <p className="text-xs text-muted">You can only create one startup.</p>
+            </div>
+          );
+        }
+
+        const disableForm = startupSubmitLoading || startupStatus === 'PENDING' || startupStatus === 'APPROVED' || isReapplyLocked;
+
+        return (
+          <form className="space-y-4" onSubmit={handleCreateStartup}>
+            {startupStatus === 'REJECTED' ? (
+              <Card className="space-y-1 border border-border bg-card p-4">
+                <Badge variant="neutral">REJECTED</Badge>
+                <p className="text-sm text-body">{startupStatusMessage || 'Your application was denied.'}</p>
+                {reapplyDate && !Number.isNaN(reapplyDate.getTime()) ? (
+                  <p className="text-xs text-muted">You can reapply after {reapplyDate.toLocaleString()}.</p>
+                ) : null}
+              </Card>
+            ) : null}
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted">Startup Name</label>
+              <input
+                value={startupName}
+                onChange={(event) => {
+                  setStartupName(event.target.value);
+                  setStartupSubmitError('');
+                }}
+                required
+                disabled={disableForm}
+                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter startup name"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted">What are you solving?</label>
+              <textarea
+                value={startupProblem}
+                onChange={(event) => {
+                  setStartupProblem(event.target.value);
+                  setStartupSubmitError('');
+                }}
+                rows={4}
+                disabled={disableForm}
+                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Describe the problem you are solving"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted">Domain</label>
+                <input
+                  value={startupDomain}
+                  onChange={(event) => {
+                    setStartupDomain(event.target.value);
+                    setStartupSubmitError('');
+                  }}
+                  disabled={disableForm}
+                  className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="e.g. FinTech"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted">Current Stage</label>
+                <select
+                  value={startupStage}
+                  onChange={(event) => {
+                    setStartupStage(event.target.value);
+                    setStartupSubmitError('');
+                  }}
+                  disabled={disableForm}
+                  className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {['IDEA', 'MVP', 'SCALING'].map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted">Total Members</label>
+              <input
+                type="number"
+                min={1}
+                value={startupTotalMembers}
+                onChange={(event) => {
+                  setStartupTotalMembers(event.target.value);
+                  setStartupSubmitError('');
+                }}
+                disabled={disableForm}
+                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g. 3"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted">Head Name</label>
+                <input
+                  value={startupHeadName}
+                  onChange={(event) => {
+                    setStartupHeadName(event.target.value);
+                    setStartupSubmitError('');
+                  }}
+                  disabled={disableForm}
+                  className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Full name"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted">Head Email</label>
+                <input
+                  type="email"
+                  value={startupHeadEmail}
+                  onChange={(event) => {
+                    setStartupHeadEmail(event.target.value);
+                    setStartupSubmitError('');
+                  }}
+                  disabled={disableForm}
+                  className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="email@example.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted">Revenue Generating?</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={startupRevenue ? 'primary' : 'ghost'}
+                    onClick={() => setStartupRevenue(true)}
+                    className="flex-1"
+                    disabled={disableForm}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!startupRevenue ? 'primary' : 'ghost'}
+                    onClick={() => setStartupRevenue(false)}
+                    className="flex-1"
+                    disabled={disableForm}
+                  >
+                    No
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted">Active Startup?</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={startupActive ? 'primary' : 'ghost'}
+                    onClick={() => setStartupActive(true)}
+                    className="flex-1"
+                    disabled={disableForm}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!startupActive ? 'primary' : 'ghost'}
+                    onClick={() => setStartupActive(false)}
+                    className="flex-1"
+                    disabled={disableForm}
+                  >
+                    No
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {startupSubmitError ? <p className="text-xs text-danger">{startupSubmitError}</p> : null}
+            <Button type="submit" variant="primary" className="w-full" disabled={disableForm}>
+              {startupSubmitLoading ? <Loader size="sm" label="Creating" inline /> : 'Create startup'}
+            </Button>
+            <p className="text-xs text-muted">You can only create one startup.</p>
+          </form>
+        );
       case 'skills':
         return (
           <div className="space-y-4">
@@ -404,6 +814,7 @@ const StudentProfile = () => {
               ) : (
                 <p className="text-sm leading-relaxed text-muted">
                   {profile.bio ||
+                    profile.about ||
                     'Add a short bio to tell others about your passions, projects, and what you are looking to build.'}
                 </p>
               )}
@@ -606,7 +1017,7 @@ const StudentProfile = () => {
 
       <Card className="space-y-5">
         <div className="flex flex-wrap items-center gap-2">
-          {tabConfig.map((tab) => (
+          {tabsToRender.map((tab) => (
             <button
               key={tab.key}
               type="button"

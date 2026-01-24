@@ -23,6 +23,7 @@ const userRoutes = require('./routes/user.routes.js');
 const trustRoutes = require('./routes/trust.routes.js');
 const commentRoutes = require('./routes/comment.routes.js');
 const likeRoutes = require('./routes/like.routes.js');
+const adminStartupRoutes = require('./routes/admin.startup.routes.js');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/feed', feedRoutes);
@@ -33,5 +34,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/trust', trustRoutes);
 app.use('/api', commentRoutes);
 app.use('/api', likeRoutes);
+app.use('/api/users', require('./routes/user.routes'));
+app.use('/api/startups', require('./routes/startup.routes'));
+app.use('/api/admin', adminStartupRoutes);
 
 module.exports = app;
