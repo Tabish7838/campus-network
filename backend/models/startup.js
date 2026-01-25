@@ -85,6 +85,19 @@ const Startup = {
     }
 
     return data;
+  },
+
+  async remove(startupId) {
+    const { error } = await supabase
+      .from('startups')
+      .delete()
+      .eq('id', startupId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return true;
   }
 };
 

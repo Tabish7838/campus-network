@@ -5,7 +5,7 @@ import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
 import { getMe, endorsePeer, updateProfile, requestAdminUpgrade } from '../../services/user.api.js';
-import { createStartup, getMyStartup } from '../../services/startup.api.js';
+import { createStartup, deleteMyStartup, getMyStartup } from '../../services/startup.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useRole } from '../../context/RoleContext.jsx';
@@ -92,6 +92,26 @@ const StudentProfile = () => {
       setError(err.message || 'Unable to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeactivateStartup = async () => {
+    const confirmed = window.confirm('Deactivate your startup? This will remove it from your profile.');
+    if (!confirmed) return;
+
+    setStartupSubmitLoading(true);
+    setStartupSubmitError('');
+    try {
+      await deleteMyStartup();
+      setStartupStatus('NONE');
+      setStartupStatusMessage('');
+      setStartupReapplyAfter(null);
+      setMyStartup(null);
+      setStartupLoadedOnce(true);
+    } catch (err) {
+      setStartupSubmitError(err.message || 'Failed to deactivate startup');
+    } finally {
+      setStartupSubmitLoading(false);
     }
   };
 
@@ -340,6 +360,11 @@ const StudentProfile = () => {
       return;
     }
 
+    if (!payload.active) {
+      setStartupSubmitError('Active startup must be set to Yes to submit an application.');
+      return;
+    }
+
     setStartupSubmitLoading(true);
     setStartupSubmitError('');
     try {
@@ -441,6 +466,16 @@ const StudentProfile = () => {
                   </div>
                 </div>
               </Card>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="w-full text-danger"
+                onClick={handleDeactivateStartup}
+                disabled={startupSubmitLoading}
+              >
+                {startupSubmitLoading ? <Loader size="sm" inline /> : 'Deactivate startup'}
+              </Button>
               <p className="text-xs text-muted">You can only create one startup.</p>
             </div>
           );
@@ -760,26 +795,6 @@ const StudentProfile = () => {
       default:
         return (
           <div className="space-y-4">
-            {profile.college && profile.course && profile.branch && profile.year && (
-              <div className="rounded-2xl bg-surface p-4">
-                <h3 className="mb-2 text-sm font-semibold text-body">Academic Information</h3>
-                <div className="space-y-1 text-sm text-muted">
-                  <p>
-                    <span className="font-medium">College:</span> {profile.college}
-                  </p>
-                  <p>
-                    <span className="font-medium">Course:</span> {profile.course}
-                  </p>
-                  <p>
-                    <span className="font-medium">Branch:</span> {profile.branch}
-                  </p>
-                  <p>
-                    <span className="font-medium">Year:</span> {profile.year}
-                  </p>
-                </div>
-              </div>
-            )}
-
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-body">About</h3>
@@ -1014,6 +1029,26 @@ const StudentProfile = () => {
           </div>
         </div>
       </header>
+
+      {profile.college && profile.course && profile.branch && profile.year && (
+        <Card className="space-y-2 border border-border bg-card p-4">
+          <h3 className="text-sm font-semibold text-body">Academic Information</h3>
+          <div className="space-y-1 text-sm text-muted">
+            <p>
+              <span className="font-medium">College:</span> {profile.college}
+            </p>
+            <p>
+              <span className="font-medium">Course:</span> {profile.course}
+            </p>
+            <p>
+              <span className="font-medium">Branch:</span> {profile.branch}
+            </p>
+            <p>
+              <span className="font-medium">Year:</span> {profile.year}
+            </p>
+          </div>
+        </Card>
+      )}
 
       <Card className="space-y-5">
         <div className="flex flex-wrap items-center gap-2">

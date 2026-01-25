@@ -7,3 +7,8 @@ export const createStartup = (payload) =>
     method: 'POST',
     data: payload,
   });
+
+export const deleteMyStartup = () =>
+  apiFetch('/api/startups/me', {
+    method: 'DELETE',
+  });

@@ -162,26 +162,6 @@ const AdminProfile = () => {
       default:
         return (
           <div className="space-y-4">
-            {profile.college && profile.course && profile.branch && profile.year && (
-              <div className="rounded-2xl bg-surface p-4">
-                <h3 className="mb-2 text-sm font-semibold text-body">Academic Information</h3>
-                <div className="space-y-1 text-sm text-muted">
-                  <p>
-                    <span className="font-medium">College:</span> {profile.college}
-                  </p>
-                  <p>
-                    <span className="font-medium">Course:</span> {profile.course}
-                  </p>
-                  <p>
-                    <span className="font-medium">Branch:</span> {profile.branch}
-                  </p>
-                  <p>
-                    <span className="font-medium">Year:</span> {profile.year}
-                  </p>
-                </div>
-              </div>
-            )}
-
             <div>
               <h3 className="mb-2 text-sm font-semibold text-body">About</h3>
               <p className="text-sm leading-relaxed text-muted">
@@ -343,22 +323,24 @@ const AdminProfile = () => {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <div className="flex flex-col items-end gap-2">
-              <Button
-                size="sm"
-                variant="primary"
-                className="rounded-full px-4"
-                onClick={handleStudentUpgrade}
-                disabled={studentUpgradeLoading}
-              >
-                {studentUpgradeLoading ? <Loader size="sm" inline /> : 'Become a Student'}
-              </Button>
-              {studentUpgradeMessage && (
-                <p className={`text-xs text-center ${studentUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
-                  {studentUpgradeMessage}
-                </p>
-              )}
-            </div>
+            {role !== 'admin' ? (
+              <div className="flex flex-col items-end gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="rounded-full px-4"
+                  onClick={handleStudentUpgrade}
+                  disabled={studentUpgradeLoading}
+                >
+                  {studentUpgradeLoading ? <Loader size="sm" inline /> : 'Become a Student'}
+                </Button>
+                {studentUpgradeMessage && (
+                  <p className={`text-xs text-center ${studentUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
+                    {studentUpgradeMessage}
+                  </p>
+                )}
+              </div>
+            ) : null}
             <Button variant="ghost" size="icon" onClick={signOut}>
               Log out
             </Button>
@@ -382,6 +364,26 @@ const AdminProfile = () => {
           </div>
         </div>
       </header>
+
+      {profile.college && profile.course && profile.branch && profile.year && (
+        <Card className="space-y-2 border border-border bg-card p-4">
+          <h3 className="text-sm font-semibold text-body">Academic Information</h3>
+          <div className="space-y-1 text-sm text-muted">
+            <p>
+              <span className="font-medium">College:</span> {profile.college}
+            </p>
+            <p>
+              <span className="font-medium">Course:</span> {profile.course}
+            </p>
+            <p>
+              <span className="font-medium">Branch:</span> {profile.branch}
+            </p>
+            <p>
+              <span className="font-medium">Year:</span> {profile.year}
+            </p>
+          </div>
+        </Card>
+      )}
 
       <Card className="space-y-5">
         <div className="flex flex-wrap items-center gap-2">

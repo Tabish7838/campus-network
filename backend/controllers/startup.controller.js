@@ -57,12 +57,19 @@ const createStartup = async (req, res) => {
 
     const finalProblem = (problem ?? problem_statement ?? '').trim();
     const finalStage = normalizeStage(stage);
+    const finalActive = Boolean(active ?? is_active);
 
     const hasRequired = name && finalProblem && domain && finalStage && head_name && head_email;
 
     if (!hasRequired) {
       return res.status(400).json({
         message: 'Required fields missing'
+      });
+    }
+
+    if (!finalActive) {
+      return res.status(400).json({
+        message: 'Active startup must be set to Yes to submit an application.'
       });
     }
 
@@ -76,7 +83,7 @@ const createStartup = async (req, res) => {
       head_name: String(head_name).trim(),
       head_email: String(head_email).trim(),
       revenue: Boolean(revenue ?? is_revenue),
-      active: Boolean(active ?? is_active),
+      active: finalActive,
       status: 'PENDING',
     });
 
@@ -91,6 +98,21 @@ const createStartup = async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+};
+
+const deleteMyStartup = async (req, res) => {
+  try {
+    const startup = await Startup.findLatestByUserId(req.user.id);
+
+    if (!startup) {
+      return res.status(200).json({ success: true, message: 'No startup to delete.' });
+    }
+
+    await Startup.remove(startup.id);
+    return res.status(200).json({ success: true, message: 'Startup deactivated.' });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -133,5 +155,6 @@ const getMyStartup = async (req, res) => {
 
 module.exports = {
   createStartup,
-  getMyStartup
+  getMyStartup,
+  deleteMyStartup,
 };
