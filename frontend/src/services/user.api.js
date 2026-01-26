@@ -22,9 +22,10 @@ export const endorsePeer = (payload) =>
     data: payload,
   });
 
-export const requestAdminUpgrade = () =>
+export const requestAdminUpgrade = (admin_password) =>
   apiFetch('/api/users/request-admin', {
     method: 'POST',
+    data: { admin_password },
   });
 
 export const requestStudentUpgrade = () =>

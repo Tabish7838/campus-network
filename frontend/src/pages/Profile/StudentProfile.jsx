@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import Card from '../../components/Card/Card.jsx';
 import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
-import { getMe, endorsePeer, updateProfile, requestAdminUpgrade } from '../../services/user.api.js';
+import { getMe, updateProfile, requestAdminUpgrade } from '../../services/user.api.js';
 import { createStartup, deleteMyStartup, getMyStartup } from '../../services/startup.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -17,6 +18,73 @@ const tabConfig = [
   { key: 'events', label: 'Events' },
 ];
 
+const AnimatedCard = ({ children, className = '', delay = 0, hover = true }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.98 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration: 0.35, ease: 'easeOut', delay }}
+    whileHover={hover ? { scale: 1.02 } : undefined}
+    className={className}
+  >
+    {children}
+  </motion.div>
+);
+
+const ProfileSkeleton = () => (
+  <div className="mx-auto max-w-md space-y-6 px-3 py-4">
+    <div className="rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-1 items-start gap-4">
+          <div className="h-16 w-16 rounded-full bg-gray-200 animate-pulse" />
+          <div className="flex-1 space-y-3">
+            <div className="flex gap-2">
+              <div className="h-6 w-28 rounded-full bg-gray-200 animate-pulse" />
+              <div className="h-6 w-20 rounded-full bg-gray-200 animate-pulse" />
+              <div className="h-6 w-16 rounded-full bg-gray-200 animate-pulse" />
+            </div>
+            <div className="h-5 w-48 rounded bg-gray-200 animate-pulse" />
+            <div className="h-4 w-72 max-w-full rounded bg-gray-200 animate-pulse" />
+          </div>
+        </div>
+        <div className="h-10 w-24 rounded-full bg-gray-200 animate-pulse" />
+      </div>
+      <p className="mt-4 text-sm text-muted">Loading your profile… please wait</p>
+    </div>
+
+    <div className="grid grid-cols-3 gap-2 rounded-3xl border border-border/60 bg-card p-4 shadow-sm">
+      <div className="h-16 rounded-2xl bg-gray-200 animate-pulse" />
+      <div className="h-16 rounded-2xl bg-gray-200 animate-pulse" />
+      <div className="h-16 rounded-2xl bg-gray-200 animate-pulse" />
+    </div>
+
+    <div className="rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
+      <div className="h-4 w-40 rounded bg-gray-200 animate-pulse" />
+      <div className="mt-4 space-y-2">
+        <div className="h-4 w-full rounded bg-gray-200 animate-pulse" />
+        <div className="h-4 w-5/6 rounded bg-gray-200 animate-pulse" />
+        <div className="h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+      </div>
+    </div>
+
+    <div className="rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
+      <div className="flex flex-wrap gap-2">
+        <div className="h-9 w-20 rounded-full bg-gray-200 animate-pulse" />
+        <div className="h-9 w-20 rounded-full bg-gray-200 animate-pulse" />
+        <div className="h-9 w-24 rounded-full bg-gray-200 animate-pulse" />
+        <div className="h-9 w-24 rounded-full bg-gray-200 animate-pulse" />
+      </div>
+      <div className="mt-4 rounded-3xl border border-border/60 bg-card p-4">
+        <div className="h-4 w-32 rounded bg-gray-200 animate-pulse" />
+        <div className="mt-3 space-y-2">
+          <div className="h-4 w-full rounded bg-gray-200 animate-pulse" />
+          <div className="h-4 w-5/6 rounded bg-gray-200 animate-pulse" />
+          <div className="h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const StudentProfile = () => {
   const { signOut } = useAuth();
   const { role, refreshRole } = useRole();
@@ -26,11 +94,6 @@ const StudentProfile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
-  const [endorsementTarget, setEndorsementTarget] = useState('');
-  const [endorsementRating, setEndorsementRating] = useState(5);
-  const [endorsementComment, setEndorsementComment] = useState('');
-  const [endorsementLoading, setEndorsementLoading] = useState(false);
-  const [endorsementSuccess, setEndorsementSuccess] = useState(null);
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -75,6 +138,10 @@ const StudentProfile = () => {
   const [adminUpgradeLoading, setAdminUpgradeLoading] = useState(false);
   const [adminUpgradeMessage, setAdminUpgradeMessage] = useState('');
   const [adminUpgradeSuccess, setAdminUpgradeSuccess] = useState(false);
+
+  const [isAdminPasswordModalOpen, setIsAdminPasswordModalOpen] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [adminPasswordError, setAdminPasswordError] = useState('');
 
   const getDisplayName = (currentProfile) => {
     if (currentProfile?.name) return currentProfile.name;
@@ -412,18 +479,22 @@ const StudentProfile = () => {
 
         if (startupStatus === 'PENDING') {
           return (
-            <Card className="space-y-2 border border-border bg-card p-4">
-              <Badge variant="neutral">PENDING</Badge>
-              <p className="text-sm text-body">{startupStatusMessage || 'Application submitted. Please stay tuned for updates.'}</p>
+            <Card className="space-y-2 border border-border/60 bg-card p-5 shadow-sm">
+              <Badge variant="neutral" className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-body">
+                PENDING
+              </Badge>
+              <p className="text-sm text-body leading-relaxed">{startupStatusMessage || 'Application submitted. Please stay tuned for updates.'}</p>
             </Card>
           );
         }
 
         if (startupStatus === 'REJECTED' && isReapplyLocked) {
           return (
-            <Card className="space-y-2 border border-border bg-card p-4">
-              <Badge variant="neutral">REJECTED</Badge>
-              <p className="text-sm text-body">{startupStatusMessage || 'Your application was denied.'}</p>
+            <Card className="space-y-2 border border-border/60 bg-card p-5 shadow-sm">
+              <Badge variant="neutral" className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-body">
+                REJECTED
+              </Badge>
+              <p className="text-sm text-body leading-relaxed">{startupStatusMessage || 'Your application was denied.'}</p>
               <p className="text-xs text-muted">You can reapply after {reapplyDate.toLocaleString()}.</p>
             </Card>
           );
@@ -432,16 +503,25 @@ const StudentProfile = () => {
         if (startupStatus === 'APPROVED' && myStartup) {
           return (
             <div className="space-y-4">
-              <Card className="space-y-3 border border-border bg-card p-4">
+              <Card className="space-y-3 border border-border/60 bg-card p-5 shadow-sm transition hover:shadow-md">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-base font-semibold text-body">{myStartup.name}</p>
+                    <p className="text-base font-semibold text-body tracking-tight">{myStartup.name}</p>
                     <p className="mt-1 text-xs text-muted">{myStartup.domain || '—'}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {myStartup.stage ? <Badge variant="neutral">{myStartup.stage}</Badge> : null}
-                    <Badge variant={myStartup.active ? 'success' : 'neutral'}>{myStartup.active ? 'Active' : 'Inactive'}</Badge>
-                    <Badge variant={myStartup.revenue ? 'primary' : 'neutral'}>
+                    {myStartup.stage ? (
+                      <Badge variant="neutral" className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-body">
+                        {myStartup.stage}
+                      </Badge>
+                    ) : null}
+                    <Badge
+                      variant={myStartup.active ? 'success' : 'neutral'}
+                      className="rounded-full px-3 py-1 text-xs font-semibold"
+                    >
+                      {myStartup.active ? 'Active' : 'Inactive'}
+                    </Badge>
+                    <Badge variant={myStartup.revenue ? 'primary' : 'neutral'} className="rounded-full px-3 py-1 text-xs font-semibold">
                       {myStartup.revenue ? 'Revenue' : 'No Revenue'}
                     </Badge>
                   </div>
@@ -470,11 +550,18 @@ const StudentProfile = () => {
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="w-full text-danger"
+                className="w-full rounded-full text-danger transition duration-200 hover:bg-surface hover:scale-[1.03] active:scale-[0.97]"
                 onClick={handleDeactivateStartup}
                 disabled={startupSubmitLoading}
               >
-                {startupSubmitLoading ? <Loader size="sm" inline /> : 'Deactivate startup'}
+                {startupSubmitLoading ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <Loader size="sm" inline />
+                    Please wait…
+                  </span>
+                ) : (
+                  'Deactivate startup'
+                )}
               </Button>
               <p className="text-xs text-muted">You can only create one startup.</p>
             </div>
@@ -484,11 +571,13 @@ const StudentProfile = () => {
         const disableForm = startupSubmitLoading || startupStatus === 'PENDING' || startupStatus === 'APPROVED' || isReapplyLocked;
 
         return (
-          <form className="space-y-4" onSubmit={handleCreateStartup}>
+          <form className="space-y-5" onSubmit={handleCreateStartup}>
             {startupStatus === 'REJECTED' ? (
-              <Card className="space-y-1 border border-border bg-card p-4">
-                <Badge variant="neutral">REJECTED</Badge>
-                <p className="text-sm text-body">{startupStatusMessage || 'Your application was denied.'}</p>
+              <Card className="space-y-2 border border-border/60 bg-card p-5 shadow-sm">
+                <Badge variant="neutral" className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-body">
+                  REJECTED
+                </Badge>
+                <p className="text-sm text-body leading-relaxed">{startupStatusMessage || 'Your application was denied.'}</p>
                 {reapplyDate && !Number.isNaN(reapplyDate.getTime()) ? (
                   <p className="text-xs text-muted">You can reapply after {reapplyDate.toLocaleString()}.</p>
                 ) : null}
@@ -662,8 +751,20 @@ const StudentProfile = () => {
             </div>
 
             {startupSubmitError ? <p className="text-xs text-danger">{startupSubmitError}</p> : null}
-            <Button type="submit" variant="primary" className="w-full" disabled={disableForm}>
-              {startupSubmitLoading ? <Loader size="sm" label="Creating" inline /> : 'Create startup'}
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full transition duration-200 hover:scale-[1.03] active:scale-[0.97]"
+              disabled={disableForm}
+            >
+              {startupSubmitLoading ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Loader size="sm" inline />
+                  Please wait…
+                </span>
+              ) : (
+                'Create startup'
+              )}
             </Button>
             <p className="text-xs text-muted">You can only create one startup.</p>
           </form>
@@ -697,12 +798,12 @@ const StudentProfile = () => {
                     skillsDraft.map((skill) => (
                       <span
                         key={skill}
-                        className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm text-body"
+                        className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-body"
                       >
                         {skill}
                         <button
                           type="button"
-                          className="text-xs text-danger"
+                          className="rounded-full px-2 py-1 text-xs text-danger transition hover:bg-surface"
                           onClick={() => handleRemoveSkill(skill)}
                           aria-label={`Remove ${skill}`}
                         >
@@ -729,7 +830,7 @@ const StudentProfile = () => {
                       }
                     }}
                     placeholder="Add a skill and press enter"
-                    className="flex-1 min-w-[180px] rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    className="flex-1 min-w-[180px] rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
                   />
                   <Button size="sm" variant="primary" onClick={handleAddSkill}>
                     Add
@@ -739,10 +840,29 @@ const StudentProfile = () => {
                 {skillsError ? <p className="text-xs text-danger">{skillsError}</p> : null}
 
                 <div className="flex gap-2">
-                  <Button size="sm" variant="primary" onClick={handleSaveSkills} disabled={skillsLoading}>
-                    {skillsLoading ? <Loader size="sm" inline /> : 'Save skills'}
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="transition duration-200 hover:scale-[1.03] active:scale-[0.97]"
+                    onClick={handleSaveSkills}
+                    disabled={skillsLoading}
+                  >
+                    {skillsLoading ? (
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <Loader size="sm" inline />
+                        Please wait…
+                      </span>
+                    ) : (
+                      'Save skills'
+                    )}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={handleCancelSkillsEdit} disabled={skillsLoading}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="transition duration-200 hover:bg-surface hover:scale-[1.03] active:scale-[0.97]"
+                    onClick={handleCancelSkillsEdit}
+                    disabled={skillsLoading}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -764,7 +884,10 @@ const StudentProfile = () => {
           <div className="space-y-3 text-sm text-muted">
             {teamsJoined.length ? (
               teamsJoined.map((team) => (
-                <Card key={team.id || team.team_id || team.name} className="space-y-1 border border-border bg-card p-4">
+                <Card
+                  key={team.id || team.team_id || team.name}
+                  className="space-y-1 border border-border/60 bg-card p-5 shadow-sm transition hover:shadow-md"
+                >
                   <p className="text-body font-semibold">{team.name || team.team_name}</p>
                   {team.event_name && <p className="text-xs text-muted">Event: {team.event_name}</p>}
                   {team.role && <p className="text-xs text-muted">Role: {team.role}</p>}
@@ -780,7 +903,10 @@ const StudentProfile = () => {
           <div className="space-y-3 text-sm text-muted">
             {eventsParticipated.length ? (
               eventsParticipated.map((event) => (
-                <Card key={event.id || event.event_id || event.title} className="space-y-1 border border-border bg-card p-4">
+                <Card
+                  key={event.id || event.event_id || event.title}
+                  className="space-y-1 border border-border/60 bg-card p-5 shadow-sm transition hover:shadow-md"
+                >
                   <p className="text-body font-semibold">{event.title || event.name}</p>
                   {event.role && <p className="text-xs text-muted">Role: {event.role}</p>}
                   {event.stage && <p className="text-xs text-muted">Stage: {event.stage}</p>}
@@ -814,14 +940,33 @@ const StudentProfile = () => {
                     }}
                     rows={4}
                     placeholder="Share your passions, projects, and what you're looking to build."
-                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm leading-relaxed outline-none transition focus:ring-2 focus:ring-primary"
                   />
                   {bioError ? <p className="text-xs text-danger">{bioError}</p> : null}
                   <div className="flex gap-2">
-                    <Button size="sm" variant="primary" onClick={handleSaveBio} disabled={bioLoading}>
-                      {bioLoading ? <Loader size="sm" inline /> : 'Save about'}
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="transition duration-200 hover:scale-[1.03] active:scale-[0.97]"
+                      onClick={handleSaveBio}
+                      disabled={bioLoading}
+                    >
+                      {bioLoading ? (
+                        <span className="inline-flex items-center justify-center gap-2">
+                          <Loader size="sm" inline />
+                          Please wait…
+                        </span>
+                      ) : (
+                        'Save about'
+                      )}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={handleCancelBioEdit} disabled={bioLoading}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="transition duration-200 hover:bg-surface hover:scale-[1.03] active:scale-[0.97]"
+                      onClick={handleCancelBioEdit}
+                      disabled={bioLoading}
+                    >
                       Cancel
                     </Button>
                   </div>
@@ -839,32 +984,14 @@ const StudentProfile = () => {
     }
   };
 
-  const handleEndorse = async (event) => {
-    event.preventDefault();
-    setEndorsementLoading(true);
-    setEndorsementSuccess(null);
-    setError(null);
-    try {
-      await endorsePeer({ targetUserId: endorsementTarget, rating: Number(endorsementRating), comment: endorsementComment });
-      setEndorsementSuccess('Endorsement submitted!');
-      setEndorsementTarget('');
-      setEndorsementRating(5);
-      setEndorsementComment('');
-    } catch (err) {
-      setError(err.message || 'Unable to submit endorsement');
-    } finally {
-      setEndorsementLoading(false);
-    }
-  };
-
-  const handleAdminUpgrade = async () => {
+  const handleAdminUpgrade = async (password) => {
     setAdminUpgradeLoading(true);
     setAdminUpgradeMessage('');
     setAdminUpgradeSuccess(false);
     setError(null);
     
     try {
-      const response = await requestAdminUpgrade();
+      const response = await requestAdminUpgrade(password);
       setAdminUpgradeMessage(response.message);
       setAdminUpgradeSuccess(response.success);
       
@@ -886,12 +1013,36 @@ const StudentProfile = () => {
     }
   };
 
+  const openAdminPasswordModal = () => {
+    setAdminPasswordInput('');
+    setAdminPasswordError('');
+    setIsAdminPasswordModalOpen(true);
+  };
+
+  const closeAdminPasswordModal = () => {
+    setIsAdminPasswordModalOpen(false);
+    setAdminPasswordInput('');
+    setAdminPasswordError('');
+  };
+
+  const submitAdminPassword = async () => {
+    const password = adminPasswordInput;
+    if (!password) {
+      setAdminPasswordError('Password is required.');
+      return;
+    }
+
+    if (password !== 'iamanadmin') {
+      setAdminPasswordError('Incorrect admin password.');
+      return;
+    }
+
+    closeAdminPasswordModal();
+    await handleAdminUpgrade(password);
+  };
+
   if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader label="Loading profile" />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (error) {
@@ -905,251 +1056,280 @@ const StudentProfile = () => {
   if (!profile) return null;
 
   return (
-    <div className="mx-auto max-w-md space-y-6 px-3">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="mx-auto max-w-md space-y-6 px-3 py-4"
+    >
       <header className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-1 items-start gap-4">
-            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-primary-light">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary-light text-2xl text-primary">
-                  {getDisplayName(profile)[0]?.toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="level">
-                  Level {profile.level_badge || profile.level || formatLevel(profile.level) || 'Explorer'}
-                </Badge>
-                <Badge variant="primary">{profile.role?.toUpperCase()}</Badge>
-                {typeof profile.xp_points === 'number' && <Badge variant="neutral">{profile.xp_points} XP</Badge>}
+        <AnimatedCard
+          delay={0}
+          className="rounded-3xl border border-border/60 bg-gradient-to-br from-primary/5 via-surface to-accent/10 p-5 shadow-sm transition-shadow duration-200 hover:shadow-lg"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-1 items-start gap-4">
+              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border border-border/60 bg-surface shadow-md">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-primary-dark text-2xl font-bold text-white">
+                    {getDisplayName(profile)[0]?.toUpperCase()}
+                  </div>
+                )}
               </div>
-              {!isEditingName ? (
-                <div className="mt-2 flex items-center gap-2">
-                  <h1 className="text-lg font-semibold text-body">{getDisplayName(profile)}</h1>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingName(true)}
-                    className="text-xs text-muted"
-                    aria-label="Edit name"
-                  >
-                    ✏️
-                  </button>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="level" className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-body">
+                    Level {profile.level_badge || profile.level || formatLevel(profile.level) || 'Explorer'}
+                  </Badge>
+                  <Badge variant="primary" className="rounded-full px-3 py-1 text-xs font-semibold">
+                    {profile.role?.toUpperCase()}
+                  </Badge>
+                  {typeof profile.xp_points === 'number' && (
+                    <Badge variant="neutral" className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-body">
+                      {profile.xp_points} XP
+                    </Badge>
+                  )}
                 </div>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  <input
-                    value={nameInput}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      if (!/^[A-Za-z ]*$/.test(value)) return;
-                      setNameInput(value);
-                      setNameError('');
-                    }}
-                    placeholder="Enter your full name"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  {nameError && <p className="text-xs text-danger">{nameError}</p>}
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="primary" onClick={handleSaveName} disabled={nameLoading}>
-                      {nameLoading ? <Loader size="sm" inline /> : 'Save'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setIsEditingName(false);
-                        setNameInput(profile.name);
+
+                {!isEditingName ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <h1 className="text-lg font-semibold text-body tracking-tight">{getDisplayName(profile)}</h1>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingName(true)}
+                      className="rounded-full px-2 py-1 text-xs text-muted transition duration-200 hover:bg-surface hover:text-primary hover:rotate-6"
+                      aria-label="Edit name"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    <input
+                      value={nameInput}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (!/^[A-Za-z ]*$/.test(value)) return;
+                        setNameInput(value);
                         setNameError('');
                       }}
-                      disabled={nameLoading}
-                    >
-                      Cancel
-                    </Button>
+                      placeholder="Enter your full name"
+                      className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
+                    />
+                    {nameError && <p className="text-xs text-danger">{nameError}</p>}
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="primary" onClick={handleSaveName} disabled={nameLoading}>
+                        {nameLoading ? (
+                          <span className="inline-flex items-center justify-center gap-2">
+                            <Loader size="sm" inline />
+                            Please wait…
+                          </span>
+                        ) : (
+                          'Save'
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="transition duration-200 hover:bg-surface hover:scale-[1.03] active:scale-[0.97]"
+                        onClick={() => {
+                          setIsEditingName(false);
+                          setNameInput(profile.name);
+                          setNameError('');
+                        }}
+                        disabled={nameLoading}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted">Only letters and spaces allowed.</p>
                   </div>
-                  <p className="text-[11px] text-muted">Only letters and spaces allowed.</p>
+                )}
+
+                <p className="mt-1 text-sm text-muted leading-relaxed">
+                  {profile.college && profile.course && profile.branch && profile.year ? (
+                    <>
+                      {profile.course} - {profile.branch} • Year {profile.year}
+                      <br />
+                      {profile.college}
+                    </>
+                  ) : (
+                    profile.batch ? `${profile.batch} • ` : ''
+                  )}
+                  {profile.academic_year || profile.program || ''}
+                </p>
+                <p className="mt-3 text-sm text-muted leading-relaxed">{profile.tagline || profile.headline || ''}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-2">
+              {role === 'student' && (
+                <div className="flex flex-col items-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="rounded-full px-5 py-2.5 shadow-sm transition duration-200 hover:shadow hover:scale-[1.03] active:scale-[0.97]"
+                    onClick={openAdminPasswordModal}
+                    disabled={adminUpgradeLoading}
+                  >
+                    {adminUpgradeLoading ? (
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <Loader size="sm" inline />
+                        Please wait…
+                      </span>
+                    ) : (
+                      'Become an Admin'
+                    )}
+                  </Button>
+                  {adminUpgradeMessage && (
+                    <p className={`text-xs text-center ${adminUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
+                      {adminUpgradeMessage}
+                    </p>
+                  )}
                 </div>
               )}
-              <p className="text-sm text-muted">
-                {profile.college && profile.course && profile.branch && profile.year ? (
-                  <>
-                    {profile.course} - {profile.branch} • Year {profile.year}
-                    <br />
-                    {profile.college}
-                  </>
-                ) : (
-                  profile.batch ? `${profile.batch} • ` : ''
-                )}
-                {profile.academic_year || profile.program || ''}
-              </p>
-              <p className="mt-3 text-sm text-muted">{profile.tagline || profile.headline || ''}</p>
+
+              <Button variant="ghost" size="icon" onClick={signOut}>
+                Log out
+              </Button>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            {role === 'student' && (
-              <div className="flex flex-col items-end gap-2">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="rounded-full px-4"
-                  onClick={handleAdminUpgrade}
-                  disabled={adminUpgradeLoading}
-                >
-                  {adminUpgradeLoading ? <Loader size="sm" inline /> : 'Become an Admin'}
-                </Button>
-                {adminUpgradeMessage && (
-                  <p className={`text-xs text-center ${adminUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
-                    {adminUpgradeMessage}
-                  </p>
-                )}
-              </div>
-            )}
-            <Button variant="ghost" size="icon" onClick={signOut}>
-              Log out
-            </Button>
-          </div>
-        </div>
+        </AnimatedCard>
 
-        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">
+        <AnimatedCard
+          delay={0.1}
+          className="grid grid-cols-3 gap-2 rounded-3xl border border-border/60 bg-card p-4 shadow-sm transition-shadow duration-200 hover:shadow-lg"
+        >
           <div className="space-y-1 text-center">
-            <Badge variant="trust" className="mx-auto w-fit text-sm">
+            <Badge variant="trust" className="mx-auto w-fit rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-body">
               {formatTrustScore(profile.trust_score)} Trust
             </Badge>
-            <p className="text-xs text-muted">Based on activity and endorsements</p>
+            <p className="text-xs text-muted">Based on activity</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-semibold text-body">{profile.projects_joined ?? teamsJoined.length ?? 0}</p>
-            <p className="text-xs uppercase tracking-wide text-muted">Teams</p>
+            <p className="text-2xl font-semibold text-body tracking-tight">{profile.projects_joined ?? teamsJoined.length ?? 0}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Teams</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-semibold text-body">{profile.events_attended ?? eventsParticipated.length ?? 0}</p>
-            <p className="text-xs uppercase tracking-wide text-muted">Events Joined</p>
+            <p className="text-2xl font-semibold text-body tracking-tight">{profile.events_attended ?? eventsParticipated.length ?? 0}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Events Joined</p>
           </div>
-        </div>
+        </AnimatedCard>
       </header>
 
       {profile.college && profile.course && profile.branch && profile.year && (
-        <Card className="space-y-2 border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold text-body">Academic Information</h3>
-          <div className="space-y-1 text-sm text-muted">
-            <p>
-              <span className="font-medium">College:</span> {profile.college}
-            </p>
-            <p>
-              <span className="font-medium">Course:</span> {profile.course}
-            </p>
-            <p>
-              <span className="font-medium">Branch:</span> {profile.branch}
-            </p>
-            <p>
-              <span className="font-medium">Year:</span> {profile.year}
-            </p>
-          </div>
-        </Card>
+        <AnimatedCard delay={0.2}>
+          <Card className="space-y-3 border border-border/60 bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-lg">
+            <h3 className="text-sm font-semibold text-body">Academic Information</h3>
+            <div className="space-y-2 text-sm text-muted">
+              <p>
+                <span className="font-semibold text-body">College:</span> {profile.college}
+              </p>
+              <p>
+                <span className="font-semibold text-body">Course:</span> {profile.course}
+              </p>
+              <p>
+                <span className="font-semibold text-body">Branch:</span> {profile.branch}
+              </p>
+              <p>
+                <span className="font-semibold text-body">Year:</span> {profile.year}
+              </p>
+            </div>
+          </Card>
+        </AnimatedCard>
       )}
 
-      <Card className="space-y-5">
-        <div className="flex flex-wrap items-center gap-2">
-          {tabsToRender.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`rounded-full px-3 py-2 text-sm font-semibold ${
-                tab.key === activeTab ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-body'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <div>{renderTabContent()}</div>
-      </Card>
-
-      <div className="space-y-6">
-        <Card className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-body">Peer Endorsements</h2>
-            <Badge variant="neutral">{profile.endorsements?.length || 0}</Badge>
-          </div>
-          <div className="space-y-3">
-            {profile.endorsements?.map((endorsement) => (
-              <div key={endorsement.id} className="rounded-2xl border border-border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-body">{endorsement.from_user_name}</p>
-                    <p className="text-xs text-muted">Rating: {endorsement.rating}/5</p>
-                  </div>
-                  <Badge variant="trust">{endorsement.rating * 20}%</Badge>
-                </div>
-                <p className="mt-3 text-sm text-muted">{endorsement.comment}</p>
-              </div>
-            ))}
-            {!profile.endorsements?.length && (
-              <p className="text-sm text-muted">No endorsements yet. Invite peers to recognize your work.</p>
-            )}
-          </div>
-        </Card>
-
-        <Card className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-body">Endorse a peer</h2>
-            <p className="mt-1 text-sm text-muted">Celebrate teammates who delivered impact.</p>
-          </div>
-          <form className="space-y-3" onSubmit={handleEndorse}>
-            <div className="space-y-2">
-              <label htmlFor="targetUser" className="text-xs font-semibold text-muted">
-                Peer user ID
-              </label>
-              <input
-                id="targetUser"
-                required
-                value={endorsementTarget}
-                onChange={(event) => setEndorsementTarget(event.target.value)}
-                placeholder="UUID of teammate"
-                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="rating" className="text-xs font-semibold text-muted">
-                Rating
-              </label>
-              <select
-                id="rating"
-                value={endorsementRating}
-                onChange={(event) => setEndorsementRating(event.target.value)}
-                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+      <AnimatedCard delay={0.3}>
+        <Card className="space-y-5 border border-border/60 bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-lg">
+          <div className="flex flex-wrap items-center gap-2">
+            {tabsToRender.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition duration-200 active:scale-[0.97] ${
+                  tab.key === activeTab
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-surface text-muted hover:bg-surface/80 hover:text-body'
+                }`}
               >
-                {[5, 4, 3, 2, 1].map((value) => (
-                  <option key={value} value={value}>
-                    {value} - {value === 5 ? 'Outstanding' : value === 4 ? 'Great' : value === 3 ? 'Solid' : 'Needs Improvement'}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="comment" className="text-xs font-semibold text-muted">
-                Comment (optional)
-              </label>
-              <textarea
-                id="comment"
-                rows={3}
-                value={endorsementComment}
-                onChange={(event) => setEndorsementComment(event.target.value)}
-                placeholder="Share why they stood out"
-                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <Button type="submit" variant="primary" className="w-full" disabled={endorsementLoading}>
-              {endorsementLoading ? <Loader size="sm" label="Submitting" inline /> : 'Submit endorsement'}
-            </Button>
-            {endorsementSuccess && <p className="text-sm text-success">{endorsementSuccess}</p>}
-          </form>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-3xl border border-border/60 bg-card p-4 shadow-sm">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+              >
+                {renderTabContent()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </Card>
-      </div>
-    </div>
+      </AnimatedCard>
+
+      {isAdminPasswordModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: 10 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="w-full max-w-sm"
+          >
+            <Card className="space-y-4 border border-border/60 bg-card p-6 shadow-lg">
+              <div>
+                <h2 className="text-lg font-semibold text-body tracking-tight">Admin verification</h2>
+                <p className="mt-1 text-sm text-muted">To become an admin you must enter the admin only password.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted">Password</label>
+                <input
+                  type="password"
+                  value={adminPasswordInput}
+                  onChange={(event) => {
+                    setAdminPasswordInput(event.target.value);
+                    setAdminPasswordError('');
+                  }}
+                  className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Enter password"
+                  autoFocus
+                />
+                {adminPasswordError ? <p className="text-xs text-danger">{adminPasswordError}</p> : null}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 rounded-full transition duration-200 hover:bg-surface hover:scale-[1.03] active:scale-[0.97]"
+                  onClick={closeAdminPasswordModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="flex-1 rounded-full shadow-sm transition duration-200 hover:scale-[1.03] active:scale-[0.97]"
+                  onClick={submitAdminPassword}
+                >
+                  Continue
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+      ) : null}
+    </motion.div>
   );
 };
 

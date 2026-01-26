@@ -50,7 +50,7 @@ const updateProfile = async (req, res) => {
     console.log("REQ BODY 👉", req.body);
     console.log("RAW KEYS 👉", Object.keys(req.body));
 
-    const { name, college, course, branch, year, role, about, bio, skills } = req.body;
+    const { name, college, course, branch, year, role, about, bio, skills, admin_about, admin_skills } = req.body;
 
     const updateData = {};
 
@@ -62,6 +62,19 @@ const updateProfile = async (req, res) => {
     if (skills !== undefined) updateData.skills = skills;
     if (about !== undefined) updateData.about = about;
     else if (bio !== undefined) updateData.about = bio;
+
+    if (admin_about !== undefined || admin_skills !== undefined) {
+      const current = await User.findById(req.user.id);
+      if (!current) {
+        return res.status(404).json({ message: 'User profile not found' });
+      }
+      if (current.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied. Admin-only profile fields.' });
+      }
+
+      if (admin_about !== undefined) updateData.admin_about = admin_about;
+      if (admin_skills !== undefined) updateData.admin_skills = admin_skills;
+    }
 
     console.log("UPDATE DATA 👉", updateData);
 
@@ -103,13 +116,12 @@ const updateProfile = async (req, res) => {
 const requestAdminUpgrade = async (req, res) => {
   try {
     const userId = req.user.id;
-    const ADMIN_UUID = '6ba34c09-da2b-4887-8a2e-d659463e274e';
+    const { admin_password } = req.body;
 
-    // Check if the user's UUID matches the admin UUID
-    if (userId !== ADMIN_UUID) {
-      return res.status(403).json({ 
-        message: 'Access denied. You are not authorized to become an admin.',
-        success: false 
+    if (String(admin_password || '') !== 'iamanadmin') {
+      return res.status(403).json({
+        message: 'Access denied. Incorrect admin password.',
+        success: false
       });
     }
 

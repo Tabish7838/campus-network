@@ -4,7 +4,7 @@ import Card from '../../components/Card/Card.jsx';
 import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
-import { getMe, endorsePeer, updateProfile, requestStudentUpgrade } from '../../services/user.api.js';
+import { getMe, updateProfile, requestStudentUpgrade } from '../../services/user.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useRole } from '../../context/RoleContext.jsx';
@@ -12,8 +12,8 @@ import { useRole } from '../../context/RoleContext.jsx';
 const tabConfig = [
   { key: 'about', label: 'About' },
   { key: 'skills', label: 'Skills' },
-  { key: 'teams', label: 'Teams Joined' },
-  { key: 'events', label: 'Events' },
+  { key: 'teams', label: 'Internships Posted' },
+  { key: 'events', label: 'Events Hosted' },
 ];
 
 const AdminProfile = () => {
@@ -25,11 +25,17 @@ const AdminProfile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
-  const [endorsementTarget, setEndorsementTarget] = useState('');
-  const [endorsementRating, setEndorsementRating] = useState(5);
-  const [endorsementComment, setEndorsementComment] = useState('');
-  const [endorsementLoading, setEndorsementLoading] = useState(false);
-  const [endorsementSuccess, setEndorsementSuccess] = useState(null);
+
+  const [isEditingAbout, setIsEditingAbout] = useState(false);
+  const [aboutInput, setAboutInput] = useState('');
+  const [aboutError, setAboutError] = useState('');
+  const [aboutLoading, setAboutLoading] = useState(false);
+
+  const [isEditingSkills, setIsEditingSkills] = useState(false);
+  const [skillsDraft, setSkillsDraft] = useState([]);
+  const [skillInputValue, setSkillInputValue] = useState('');
+  const [skillsError, setSkillsError] = useState('');
+  const [skillsLoading, setSkillsLoading] = useState(false);
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -45,6 +51,96 @@ const AdminProfile = () => {
     if (currentProfile?.name) return currentProfile.name;
     if (currentProfile?.email) return currentProfile.email.split('@')[0];
     return 'Admin';
+  };
+
+  const handleSaveAbout = async () => {
+    const trimmed = aboutInput.trim();
+    const currentAbout = profile?.admin_about || '';
+
+    if (trimmed === currentAbout) {
+      setAboutError('No changes to save');
+      return;
+    }
+
+    if (trimmed.length > 600) {
+      setAboutError('About is too long (max 600 characters)');
+      return;
+    }
+
+    setAboutLoading(true);
+    setAboutError('');
+    try {
+      const updatedProfile = await updateProfile({ admin_about: trimmed });
+      setProfile(updatedProfile);
+      setIsEditingAbout(false);
+      setAboutInput(updatedProfile?.admin_about || trimmed);
+    } catch (err) {
+      setAboutError(err.message || 'Failed to update about section. Please try again.');
+    } finally {
+      setAboutLoading(false);
+    }
+  };
+
+  const handleCancelAboutEdit = () => {
+    setIsEditingAbout(false);
+    setAboutInput(profile?.admin_about || '');
+    setAboutError('');
+  };
+
+  const handleAddSkill = () => {
+    const trimmed = skillInputValue.trim();
+    if (!trimmed) {
+      setSkillsError('Skill cannot be empty');
+      return;
+    }
+    if (trimmed.length > 40) {
+      setSkillsError('Skill name is too long');
+      return;
+    }
+    if (skillsDraft.some((skill) => skill.toLowerCase() === trimmed.toLowerCase())) {
+      setSkillsError('Skill already added');
+      return;
+    }
+    setSkillsDraft((prev) => [...prev, trimmed]);
+    setSkillInputValue('');
+    setSkillsError('');
+  };
+
+  const handleRemoveSkill = (skillToRemove) => {
+    setSkillsDraft((prev) => prev.filter((skill) => skill !== skillToRemove));
+  };
+
+  const handleSaveSkills = async () => {
+    const normalizedSkills = normalizeSkills(skillsDraft);
+    const previousSkills = Array.isArray(profile?.admin_skills) ? profile.admin_skills : [];
+
+    if (skillsFingerprint(normalizedSkills) === skillsFingerprint(previousSkills)) {
+      setSkillsError('No changes to save');
+      return;
+    }
+
+    setSkillsLoading(true);
+    setSkillsError('');
+    try {
+      const updatedProfile = await updateProfile({ admin_skills: normalizedSkills });
+      setProfile(updatedProfile);
+      setIsEditingSkills(false);
+      const nextSkills = Array.isArray(updatedProfile?.admin_skills) ? updatedProfile.admin_skills : normalizedSkills;
+      setSkillsDraft(nextSkills);
+      setSkillInputValue('');
+    } catch (err) {
+      setSkillsError(err.message || 'Failed to update skills. Please try again.');
+    } finally {
+      setSkillsLoading(false);
+    }
+  };
+
+  const handleCancelSkillsEdit = () => {
+    setIsEditingSkills(false);
+    const resetSkills = Array.isArray(profile?.admin_skills) ? profile.admin_skills : [];
+    setSkillsDraft(resetSkills);
+    setSkillInputValue('');
+    setSkillsError('');
   };
 
   const loadProfile = async () => {
@@ -68,7 +164,16 @@ const AdminProfile = () => {
     if (profile?.name) {
       setNameInput(profile.name);
     }
+
+    if (profile) {
+      setAboutInput(profile.admin_about || '');
+      const nextSkills = Array.isArray(profile.admin_skills) ? profile.admin_skills : [];
+      setSkillsDraft(nextSkills);
+    }
   }, [profile]);
+
+  const normalizeSkills = (skills) => skills.map((skill) => skill.trim()).filter(Boolean);
+  const skillsFingerprint = (skills) => normalizeSkills(skills).map((skill) => skill.toLowerCase()).sort().join('|');
 
   const handleSaveName = async () => {
     const trimmed = nameInput.trim();
@@ -117,14 +222,69 @@ const AdminProfile = () => {
     switch (activeTab) {
       case 'skills':
         return (
-          <ul className="grid gap-2 text-sm text-muted">
-            {(profile.skills || []).map((skill) => (
-              <li key={skill} className="rounded-2xl bg-surface px-4 py-3 text-body">
-                {skill}
-              </li>
-            ))}
-            {!(profile.skills || []).length ? <p>No skills added yet.</p> : null}
-          </ul>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-body">Admin Skills</h3>
+              {isEditingSkills ? null : (
+                <Button size="xs" variant="ghost" onClick={() => setIsEditingSkills(true)}>
+                  Edit
+                </Button>
+              )}
+            </div>
+
+            {isEditingSkills ? (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    value={skillInputValue}
+                    onChange={(event) => {
+                      setSkillInputValue(event.target.value);
+                      setSkillsError('');
+                    }}
+                    placeholder="Add a skill"
+                    className="flex-1 rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <Button type="button" size="sm" variant="primary" onClick={handleAddSkill} disabled={skillsLoading}>
+                    Add
+                  </Button>
+                </div>
+
+                {skillsError ? <p className="text-xs text-danger">{skillsError}</p> : null}
+
+                <div className="flex flex-wrap gap-2">
+                  {skillsDraft.map((skill) => (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => handleRemoveSkill(skill)}
+                      className="rounded-full bg-surface px-3 py-2 text-xs text-body"
+                    >
+                      {skill} ✕
+                    </button>
+                  ))}
+                  {!skillsDraft.length ? <p className="text-sm text-muted">No skills added yet.</p> : null}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button size="sm" variant="primary" onClick={handleSaveSkills} disabled={skillsLoading}>
+                    {skillsLoading ? <Loader size="sm" inline /> : 'Save'}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleCancelSkillsEdit} disabled={skillsLoading}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <ul className="grid gap-2 text-sm text-muted">
+                {(profile.admin_skills || []).map((skill) => (
+                  <li key={skill} className="rounded-2xl bg-surface px-4 py-3 text-body">
+                    {skill}
+                  </li>
+                ))}
+                {!(profile.admin_skills || []).length ? <p>No skills added yet.</p> : null}
+              </ul>
+            )}
+          </div>
         );
       case 'teams':
         return (
@@ -162,35 +322,63 @@ const AdminProfile = () => {
       default:
         return (
           <div className="space-y-4">
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-body">About</h3>
-              <p className="text-sm leading-relaxed text-muted">
-                {profile.bio || profile.description ||
-                  'Admin profile - manage events, oversee activities, and support the campus ecosystem.'}
-              </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-body">About</h3>
+                {isEditingAbout ? null : (
+                  <Button size="xs" variant="ghost" onClick={() => setIsEditingAbout(true)}>
+                    Edit
+                  </Button>
+                )}
+              </div>
+
+              {isEditingAbout ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={aboutInput}
+                    onChange={(event) => {
+                      setAboutInput(event.target.value);
+                      setAboutError('');
+                    }}
+                    rows={5}
+                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Write something about your admin profile..."
+                  />
+                  {aboutError ? <p className="text-xs text-danger">{aboutError}</p> : null}
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="primary" onClick={handleSaveAbout} disabled={aboutLoading}>
+                      {aboutLoading ? <Loader size="sm" inline /> : 'Save'}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={handleCancelAboutEdit} disabled={aboutLoading}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed text-muted">
+                  {profile.admin_about ||
+                    'Admin profile - manage events, oversee activities, and support the campus ecosystem.'}
+                </p>
+              )}
             </div>
           </div>
         );
     }
-  }, [activeTab, profile, teamsJoined, eventsParticipated]);
-
-  const handleEndorse = async (event) => {
-    event.preventDefault();
-    setEndorsementLoading(true);
-    setEndorsementSuccess(null);
-    setError(null);
-    try {
-      await endorsePeer({ targetUserId: endorsementTarget, rating: Number(endorsementRating), comment: endorsementComment });
-      setEndorsementSuccess('Endorsement submitted!');
-      setEndorsementTarget('');
-      setEndorsementRating(5);
-      setEndorsementComment('');
-    } catch (err) {
-      setError(err.message || 'Unable to submit endorsement');
-    } finally {
-      setEndorsementLoading(false);
-    }
-  };
+  }, [
+    activeTab,
+    profile,
+    teamsJoined,
+    eventsParticipated,
+    aboutInput,
+    aboutError,
+    aboutLoading,
+    isEditingAbout,
+    isEditingSkills,
+    skillInputValue,
+    skillsDraft,
+    skillsError,
+    skillsLoading,
+  ]);
 
   const handleStudentUpgrade = async () => {
     setStudentUpgradeLoading(true);
@@ -352,7 +540,7 @@ const AdminProfile = () => {
             <Badge variant="trust" className="mx-auto w-fit text-sm">
               {formatTrustScore(profile.trust_score)} Trust
             </Badge>
-            <p className="text-xs text-muted">Based on activity and endorsements</p>
+            <p className="text-xs text-muted">Based on activity</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-semibold text-body">{profile.projects_joined ?? teamsJoined.length ?? 0}</p>
@@ -402,88 +590,6 @@ const AdminProfile = () => {
         </div>
         <div>{tabContent}</div>
       </Card>
-
-      <div className="space-y-6">
-        <Card className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-body">Peer Endorsements</h2>
-            <Badge variant="neutral">{profile.endorsements?.length || 0}</Badge>
-          </div>
-          <div className="space-y-3">
-            {profile.endorsements?.map((endorsement) => (
-              <div key={endorsement.id} className="rounded-2xl border border-border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-body">{endorsement.from_user_name}</p>
-                    <p className="text-xs text-muted">Rating: {endorsement.rating}/5</p>
-                  </div>
-                  <Badge variant="trust">{endorsement.rating * 20}%</Badge>
-                </div>
-                <p className="mt-3 text-sm text-muted">{endorsement.comment}</p>
-              </div>
-            ))}
-            {!profile.endorsements?.length && (
-              <p className="text-sm text-muted">No endorsements yet. Invite peers to recognize your work.</p>
-            )}
-          </div>
-        </Card>
-
-        <Card className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-body">Endorse a peer</h2>
-            <p className="mt-1 text-sm text-muted">Celebrate teammates who delivered impact.</p>
-          </div>
-          <form className="space-y-3" onSubmit={handleEndorse}>
-            <div className="space-y-2">
-              <label htmlFor="targetUser" className="text-xs font-semibold text-muted">
-                Peer user ID
-              </label>
-              <input
-                id="targetUser"
-                required
-                value={endorsementTarget}
-                onChange={(event) => setEndorsementTarget(event.target.value)}
-                placeholder="UUID of teammate"
-                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="rating" className="text-xs font-semibold text-muted">
-                Rating
-              </label>
-              <select
-                id="rating"
-                value={endorsementRating}
-                onChange={(event) => setEndorsementRating(event.target.value)}
-                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-              >
-                {[5, 4, 3, 2, 1].map((value) => (
-                  <option key={value} value={value}>
-                    {value} - {value === 5 ? 'Outstanding' : value === 4 ? 'Great' : value === 3 ? 'Solid' : 'Needs Improvement'}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="comment" className="text-xs font-semibold text-muted">
-                Comment (optional)
-              </label>
-              <textarea
-                id="comment"
-                rows={3}
-                value={endorsementComment}
-                onChange={(event) => setEndorsementComment(event.target.value)}
-                placeholder="Share why they stood out"
-                className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <Button type="submit" variant="primary" className="w-full" disabled={endorsementLoading}>
-              {endorsementLoading ? <Loader size="sm" label="Submitting" inline /> : 'Submit endorsement'}
-            </Button>
-            {endorsementSuccess && <p className="text-sm text-success">{endorsementSuccess}</p>}
-          </form>
-        </Card>
-      </div>
     </div>
   );
 };
