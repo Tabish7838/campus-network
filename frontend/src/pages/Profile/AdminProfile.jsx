@@ -226,14 +226,14 @@ const AdminProfile = () => {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-body">Admin Skills</h3>
               {isEditingSkills ? null : (
-                <Button size="xs" variant="ghost" onClick={() => setIsEditingSkills(true)}>
+                <Button size="xs" variant="ghost" onClick={() => setIsEditingSkills(true)} className="text-primary hover:bg-surface rounded-full">
                   Edit
                 </Button>
               )}
             </div>
 
             {isEditingSkills ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex gap-2">
                   <input
                     value={skillInputValue}
@@ -242,9 +242,9 @@ const AdminProfile = () => {
                       setSkillsError('');
                     }}
                     placeholder="Add a skill"
-                    className="flex-1 rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    className="flex-1 rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
                   />
-                  <Button type="button" size="sm" variant="primary" onClick={handleAddSkill} disabled={skillsLoading}>
+                  <Button type="button" size="sm" variant="primary" onClick={handleAddSkill} disabled={skillsLoading} className="rounded-full px-4">
                     Add
                   </Button>
                 </div>
@@ -257,7 +257,7 @@ const AdminProfile = () => {
                       key={skill}
                       type="button"
                       onClick={() => handleRemoveSkill(skill)}
-                      className="rounded-full bg-surface px-3 py-2 text-xs text-body"
+                      className="rounded-full bg-surface px-3 py-2 text-xs text-body hover:bg-danger/5 hover:text-danger transition-colors"
                     >
                       {skill} ✕
                     </button>
@@ -266,56 +266,56 @@ const AdminProfile = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button size="sm" variant="primary" onClick={handleSaveSkills} disabled={skillsLoading}>
+                  <Button size="sm" variant="primary" onClick={handleSaveSkills} disabled={skillsLoading} className="rounded-full px-5">
                     {skillsLoading ? <Loader size="sm" inline /> : 'Save'}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={handleCancelSkillsEdit} disabled={skillsLoading}>
+                  <Button size="sm" variant="ghost" onClick={handleCancelSkillsEdit} disabled={skillsLoading} className="rounded-full hover:bg-surface">
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : (
-              <ul className="grid gap-2 text-sm text-muted">
+              <div className="space-y-2">
                 {(profile.admin_skills || []).map((skill) => (
-                  <li key={skill} className="rounded-2xl bg-surface px-4 py-3 text-body">
+                  <div key={skill} className="rounded-2xl bg-surface px-4 py-3 text-body transition-colors hover:bg-primary/5">
                     {skill}
-                  </li>
+                  </div>
                 ))}
-                {!(profile.admin_skills || []).length ? <p>No skills added yet.</p> : null}
-              </ul>
+                {!(profile.admin_skills || []).length ? <p className="text-sm text-muted">No skills added yet.</p> : null}
+              </div>
             )}
           </div>
         );
       case 'teams':
         return (
-          <div className="space-y-3 text-sm text-muted">
+          <div className="space-y-3">
             {teamsJoined.length ? (
               teamsJoined.map((team) => (
-                <Card key={team.id || team.team_id || team.name} className="space-y-1 border border-border bg-card p-4">
-                  <p className="text-body font-semibold">{team.name || team.team_name}</p>
-                  {team.event_name && <p className="text-xs text-muted">Event: {team.event_name}</p>}
+                <div key={team.id || team.team_id || team.name} className="rounded-2xl bg-card border border-border p-4 transition-shadow hover:shadow-md">
+                  <p className="text-body font-semibold mb-2">{team.name || team.team_name}</p>
+                  {team.event_name && <p className="text-xs text-muted mb-1">Event: {team.event_name}</p>}
                   {team.role && <p className="text-xs text-muted">Role: {team.role}</p>}
-                </Card>
+                </div>
               ))
             ) : (
-              <p>No teams yet. Join events to collaborate with fellow builders.</p>
+              <p className="text-sm text-muted">No internships posted yet. Start creating opportunities for students.</p>
             )}
           </div>
         );
       case 'events':
         return (
-          <div className="space-y-3 text-sm text-muted">
+          <div className="space-y-3">
             {eventsParticipated.length ? (
               eventsParticipated.map((event) => (
-                <Card key={event.id || event.event_id || event.title} className="space-y-1 border border-border bg-card p-4">
-                  <p className="text-body font-semibold">{event.title || event.name}</p>
-                  {event.role && <p className="text-xs text-muted">Role: {event.role}</p>}
-                  {event.stage && <p className="text-xs text-muted">Stage: {event.stage}</p>}
+                <div key={event.id || event.event_id || event.title} className="rounded-2xl bg-card border border-border p-4 transition-shadow hover:shadow-md">
+                  <p className="text-body font-semibold mb-2">{event.title || event.name}</p>
+                  {event.role && <p className="text-xs text-muted mb-1">Role: {event.role}</p>}
+                  {event.stage && <p className="text-xs text-muted mb-1">Stage: {event.stage}</p>}
                   {event.result && <p className="text-xs text-success">Outcome: {event.result}</p>}
-                </Card>
+                </div>
               ))
             ) : (
-              <p>No event participation recorded yet. Explore events to start building your track record.</p>
+              <p className="text-sm text-muted">No events hosted yet. Start organizing events to engage the community.</p>
             )}
           </div>
         );
@@ -326,14 +326,14 @@ const AdminProfile = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-body">About</h3>
                 {isEditingAbout ? null : (
-                  <Button size="xs" variant="ghost" onClick={() => setIsEditingAbout(true)}>
+                  <Button size="xs" variant="ghost" onClick={() => setIsEditingAbout(true)} className="text-primary hover:bg-surface rounded-full">
                     Edit
                   </Button>
                 )}
               </div>
 
               {isEditingAbout ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <textarea
                     value={aboutInput}
                     onChange={(event) => {
@@ -341,15 +341,15 @@ const AdminProfile = () => {
                       setAboutError('');
                     }}
                     rows={5}
-                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm leading-relaxed outline-none transition focus:ring-2 focus:ring-primary"
                     placeholder="Write something about your admin profile..."
                   />
                   {aboutError ? <p className="text-xs text-danger">{aboutError}</p> : null}
                   <div className="flex gap-2">
-                    <Button size="sm" variant="primary" onClick={handleSaveAbout} disabled={aboutLoading}>
+                    <Button size="sm" variant="primary" onClick={handleSaveAbout} disabled={aboutLoading} className="rounded-full px-5">
                       {aboutLoading ? <Loader size="sm" inline /> : 'Save'}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={handleCancelAboutEdit} disabled={aboutLoading}>
+                    <Button size="sm" variant="ghost" onClick={handleCancelAboutEdit} disabled={aboutLoading} className="rounded-full hover:bg-surface">
                       Cancel
                     </Button>
                   </div>
@@ -428,168 +428,189 @@ const AdminProfile = () => {
   if (!profile) return null;
 
   return (
-    <div className="mx-auto max-w-md space-y-6 px-3">
+    <div className="mx-auto max-w-md space-y-6 px-3 py-4">
       <header className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-1 items-start gap-4">
-            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-primary-light">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary-light text-2xl text-primary">
-                  {getDisplayName(profile)[0]?.toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="level">
-                  Level {profile.level_badge || profile.level || formatLevel(profile.level) || 'Explorer'}
-                </Badge>
-                <Badge variant="primary">ADMIN</Badge>
-                {typeof profile.xp_points === 'number' && <Badge variant="neutral">{profile.xp_points} XP</Badge>}
+        <div className="rounded-3xl bg-gradient-to-br from-primary/5 via-surface to-primary/10 p-6 shadow-sm transition-shadow duration-200 hover:shadow-lg">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-1 items-start gap-4">
+              <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-2 border-primary/20 shadow-md">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-primary-dark text-3xl font-bold text-white">
+                    {getDisplayName(profile)[0]?.toUpperCase()}
+                  </div>
+                )}
               </div>
-              {!isEditingName ? (
-                <div className="mt-2 flex items-center gap-2">
-                  <h1 className="text-lg font-semibold text-body">{getDisplayName(profile)}</h1>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingName(true)}
-                    className="text-xs text-muted"
-                    aria-label="Edit name"
-                  >
-                    ✏️
-                  </button>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <Badge variant="level" className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-body">
+                    Level {profile.level_badge || profile.level || formatLevel(profile.level) || 'Explorer'}
+                  </Badge>
+                  <Badge variant="primary" className="rounded-full bg-primary px-4 py-1 text-xs font-semibold text-black shadow-sm">
+                    ADMIN
+                  </Badge>
+                  {typeof profile.xp_points === 'number' && (
+                    <Badge variant="neutral" className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-body">
+                      {profile.xp_points} XP
+                    </Badge>
+                  )}
                 </div>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  <input
-                    value={nameInput}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      if (!/^[A-Za-z ]*$/.test(value)) return;
-                      setNameInput(value);
-                      setNameError('');
-                    }}
-                    placeholder="Enter your full name"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  {nameError && <p className="text-xs text-danger">{nameError}</p>}
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="primary" onClick={handleSaveName} disabled={nameLoading}>
-                      {nameLoading ? <Loader size="sm" inline /> : 'Save'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setIsEditingName(false);
-                        setNameInput(profile.name);
+                {!isEditingName ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-body tracking-tight">{getDisplayName(profile)}</h1>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingName(true)}
+                      className="rounded-full px-2 py-1 text-xs text-muted transition duration-200 hover:bg-surface hover:text-primary hover:rotate-6"
+                      aria-label="Edit name"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    <input
+                      value={nameInput}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (!/^[A-Za-z ]*$/.test(value)) return;
+                        setNameInput(value);
                         setNameError('');
                       }}
-                      disabled={nameLoading}
-                    >
-                      Cancel
-                    </Button>
+                      placeholder="Enter your full name"
+                      className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
+                    />
+                    {nameError && <p className="text-xs text-danger">{nameError}</p>}
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="primary" onClick={handleSaveName} disabled={nameLoading}>
+                        {nameLoading ? <Loader size="sm" inline /> : 'Save'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="transition duration-200 hover:bg-surface hover:scale-[1.03] active:scale-[0.97]"
+                        onClick={() => {
+                          setIsEditingName(false);
+                          setNameInput(profile.name);
+                          setNameError('');
+                        }}
+                        disabled={nameLoading}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted">Only letters and spaces allowed.</p>
                   </div>
-                  <p className="text-[11px] text-muted">Only letters and spaces allowed.</p>
-                </div>
-              )}
-              <p className="text-sm text-muted">
-                {profile.college && profile.course && profile.branch && profile.year ? (
-                  <>
-                    {profile.course} - {profile.branch} • Year {profile.year}
-                    <br />
-                    {profile.college}
-                  </>
-                ) : (
-                  profile.batch ? `${profile.batch} • ` : ''
                 )}
-                {profile.academic_year || profile.program || ''}
-              </p>
-              <p className="mt-3 text-sm text-muted">{profile.tagline || profile.headline || ''}</p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {role !== 'admin' ? (
-              <div className="flex flex-col items-end gap-2">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="rounded-full px-4"
-                  onClick={handleStudentUpgrade}
-                  disabled={studentUpgradeLoading}
-                >
-                  {studentUpgradeLoading ? <Loader size="sm" inline /> : 'Become a Student'}
-                </Button>
-                {studentUpgradeMessage && (
-                  <p className={`text-xs text-center ${studentUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
-                    {studentUpgradeMessage}
-                  </p>
-                )}
+                <p className="mt-2 text-sm text-muted leading-relaxed">
+                  {profile.college && profile.course && profile.branch && profile.year ? (
+                    <>
+                      {profile.course} - {profile.branch} • Year {profile.year}
+                      <br />
+                      {profile.college}
+                    </>
+                  ) : (
+                    profile.batch ? `${profile.batch} • ` : ''
+                  )}
+                  {profile.academic_year || profile.program || ''}
+                </p>
+                <p className="mt-3 text-sm text-muted leading-relaxed">{profile.tagline || profile.headline || ''}</p>
               </div>
-            ) : null}
-            <Button variant="ghost" size="icon" onClick={signOut}>
-              Log out
-            </Button>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              {role !== 'admin' ? (
+                <div className="flex flex-col items-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="rounded-full px-5 py-2 shadow-sm transition duration-200 hover:shadow hover:scale-[1.03] active:scale-[0.97]"
+                    onClick={handleStudentUpgrade}
+                    disabled={studentUpgradeLoading}
+                  >
+                    {studentUpgradeLoading ? <Loader size="sm" inline /> : 'Become a Student'}
+                  </Button>
+                  {studentUpgradeMessage && (
+                    <p className={`text-xs text-center ${studentUpgradeSuccess ? 'text-green-600' : 'text-red-600'}`}>
+                      {studentUpgradeMessage}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+              <Button variant="ghost" size="icon" onClick={signOut} className="text-primary hover:bg-surface rounded-full">
+                Log out
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">
-          <div className="space-y-1 text-center">
-            <Badge variant="trust" className="mx-auto w-fit text-sm">
-              {formatTrustScore(profile.trust_score)} Trust
-            </Badge>
-            <p className="text-xs text-muted">Based on activity</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-semibold text-body">{profile.projects_joined ?? teamsJoined.length ?? 0}</p>
-            <p className="text-xs uppercase tracking-wide text-muted">Teams</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-semibold text-body">{profile.events_attended ?? eventsParticipated.length ?? 0}</p>
-            <p className="text-xs uppercase tracking-wide text-muted">Events Joined</p>
+        <div className="rounded-2xl bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2 text-center">
+              <p className="text-2xl font-bold text-body">{formatTrustScore(profile.trust_score)}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Trust Score</p>
+            </div>
+            <div className="space-y-2 text-center">
+              <p className="text-2xl font-bold text-body">{profile.projects_joined ?? teamsJoined.length ?? 0}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Teams</p>
+            </div>
+            <div className="space-y-2 text-center">
+              <p className="text-2xl font-bold text-body">{profile.events_attended ?? eventsParticipated.length ?? 0}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Events Joined</p>
+            </div>
+            <div className="space-y-2 text-center">
+              <p className="text-2xl font-bold text-body">{profile.events_organized?.length || 0}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Events Hosted</p>
+            </div>
           </div>
         </div>
       </header>
 
       {profile.college && profile.course && profile.branch && profile.year && (
-        <Card className="space-y-2 border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold text-body">Academic Information</h3>
-          <div className="space-y-1 text-sm text-muted">
-            <p>
-              <span className="font-medium">College:</span> {profile.college}
-            </p>
-            <p>
-              <span className="font-medium">Course:</span> {profile.course}
-            </p>
-            <p>
-              <span className="font-medium">Branch:</span> {profile.branch}
-            </p>
-            <p>
-              <span className="font-medium">Year:</span> {profile.year}
-            </p>
+        <div className="rounded-2xl bg-card border border-border p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
+          <h3 className="text-sm font-semibold text-body mb-4">Academic Information</h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="font-medium text-body">College</span>
+              <span className="text-muted">{profile.college}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium text-body">Course</span>
+              <span className="text-muted">{profile.course}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium text-body">Branch</span>
+              <span className="text-muted">{profile.branch}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium text-body">Year</span>
+              <span className="text-muted">{profile.year}</span>
+            </div>
           </div>
-        </Card>
+        </div>
       )}
 
-      <Card className="space-y-5">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="rounded-2xl bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
+        <div className="flex flex-wrap items-center gap-2 mb-5">
           {tabConfig.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`rounded-full px-3 py-2 text-sm font-semibold ${
-                tab.key === activeTab ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-body'
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                tab.key === activeTab
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-surface text-muted hover:bg-primary/5 hover:text-body'
               }`}
             >
               {tab.label}
             </button>
           ))}
         </div>
-        <div>{tabContent}</div>
-      </Card>
+        <div className="rounded-2xl bg-card border border-border p-4">
+          {tabContent}
+        </div>
+      </div>
     </div>
   );
 };
