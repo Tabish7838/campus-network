@@ -3,6 +3,21 @@
 ## Summary
 Refactored the profile system to support role-based views with dedicated UIs for students and admin/organizers. The changes include a clean separation of concerns, improved code organization, and better user experience for both student and admin users.
 
+## Internship Tab Refresh (Jan 31 2026)
+- **Internship cards** now use a dedicated `InternshipCard` component with integrated metadata tiles (duration, stipend, location, deadline) and a clearer hierarchy (title → organization → key facts).
+- **Filters & search**: All internship filters (skill, duration, paid/unpaid, location, work type) and sorting sync with URL params; search input is debounced and has an expanded full-width layout for better discoverability.
+- **Application flow feedback**: Successful submissions trigger the shared notification tray, and buttons lock after a successful apply to prevent duplicate requests.
+- **Inline resume submission**: Cards now include a resume/portfolio URL input and submit button directly, removing the need for a separate detail form.
+- **Streamlined UI**: Removed redundant work-type badges and skills tiles to reduce visual noise and keep focus on key metadata and actions.
+- **Mobile-first layout**: Cards and forms adapt cleanly on small screens with stacked/responsive layouts.
+
+### Notes for Collaborators
+- The apply CTA now lives inside each `InternshipCard` and calls `applyToInternship(id, { resumeLink })`. Ensure the backend returns success (200/201) so the notification tray fires.
+- Resume links are validated as URLs; if additional fields become mandatory, extend the form in `InternshipCard.jsx` and update validation logic.
+- Filter state is URL-driven; avoid hardcoding filter options or breaking query-param sync when extending filters.
+- For UI tweaks, reuse the metadata tile pattern in `InternshipCard.jsx` for consistency.
+- The detail sidebar is now read-only; do not re-add inline forms there.
+
 ## Changes Made
 
 ### Profile Architecture Updates
@@ -12,14 +27,10 @@ Refactored the profile system to support role-based views with dedicated UIs for
   - Created new `AdminProfile.jsx` for admin/organizer-specific functionality
 
 ### Student Profile Enhancements
-- **Become an Admin CTA**: Added a prominent button for students to apply for admin/organizer status with consistent styling as "Become a Startup"
+- **Become an Admin CTA**: Added a prominent button for students to apply for admin/organizer status
 - **Profile Editing**: Improved name editing with validation and loading states
 - **Endorsements**: Enhanced UI for viewing and receiving peer endorsements
 - **Tab Navigation**: Organized content into logical sections (About, Skills, Teams, Events, Startups)
-- **Editable Skills**: Added inline editing for skills with add/remove functionality
-- **Editable About Section**: Implemented rich text editing for user bios with character limit validation
-- **Input Validation**: Prevents empty/duplicate skill entries and enforces character limits
-- **Optimized Updates**: Only sends changed data to the backend to reduce unnecessary API calls
 
 ### New Admin/Organizer Profile
 - **Organizer Branding**: Added support for organization logos, banners, and branding
@@ -69,9 +80,6 @@ Refactored the profile system to support role-based views with dedicated UIs for
 - ✅ Student profile with all existing functionality
 - ✅ Admin/Organizer profile with basic information
 - ✅ Responsive design for all components
-- ✅ Inline editing for Skills and About sections
-- ✅ Consistent CTA styling for role upgrade buttons
-- ✅ Input validation and change detection
 - ⏳ Admin application flow (in progress)
 - ⏳ Detailed admin analytics (planned)
 
