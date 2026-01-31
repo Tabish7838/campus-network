@@ -37,5 +37,6 @@ app.use('/api', likeRoutes);
 app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/startups', require('./routes/startup.routes'));
 app.use('/api/admin', adminStartupRoutes);
+app.use('/api/chat', require('./routes/chatRoutes'));
 
 module.exports = app;

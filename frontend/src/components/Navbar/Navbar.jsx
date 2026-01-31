@@ -8,6 +8,7 @@ const navItems = [
   { to: '/hire', label: 'Hire', icon: '🧑‍💼', roles: ['admin'] },
   { to: '/admin/startups', label: 'Startups', icon: '🚀', roles: ['admin'] },
   { to: '/events', label: 'Events', icon: '🎉', roles: ['student', 'admin'] },
+  { to: '/chat', label: 'Chat', icon: '🤖', roles: ['student', 'admin'] },
   { to: '/profile', label: 'Profile', icon: '👤', roles: ['student', 'admin'] },
 ];
 

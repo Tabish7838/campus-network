@@ -9,8 +9,14 @@ const EventAdminDashboardPage = lazy(() => import('../pages/Events/EventAdminDas
 const AdminStartupsDashboardPage = lazy(() => import('../pages/AdminStartups/AdminStartupsDashboard.jsx'));
 const ProfilePage = lazy(() => import('../pages/Profile/Profile.jsx'));
 const LetsBuildPage = lazy(() => import('../pages/LetsBuild/LetsBuild.jsx'));
+const ChatPage = lazy(() => import('../pages/ChatPage.jsx'));
 
 const routes = [
+  {
+    path: '/chat',
+    element: ChatPage,
+    allowedRoles: ['student', 'admin', 'organizer', 'club'],
+  },
   {
     path: '/',
     element: HomePage,

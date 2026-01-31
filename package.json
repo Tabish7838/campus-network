@@ -1,0 +1,17 @@
+{
+    "name": "campus-network-root",
+    "version": "1.0.0",
+    "description": "Root package for Campus Network",
+    "private": true,
+    "workspaces": [
+        "backend",
+        "frontend"
+    ],
+    "scripts": {
+        "start": "concurrently \"npm run dev -w backend\" \"npm run dev -w startup-college-platform\"",
+        "install:all": "npm install"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}
