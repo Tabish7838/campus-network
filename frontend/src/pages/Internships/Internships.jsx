@@ -1,69 +1,154 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Card from '../../components/Card/Card.jsx';
-import Button from '../../components/Button/Button.jsx';
-import Badge from '../../components/Badge/Badge.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
-import FilterBar from '../../components/FilterBar/FilterBar.jsx';
+import InternshipCard from '../../components/InternshipCard/InternshipCard.jsx';
 import {
   fetchInternships,
   fetchInternshipById,
   applyToInternship,
 } from '../../services/internship.api.js';
 import { formatSkills } from '../../utils/formatters.js';
+import useDebouncedValue from '../../utils/useDebouncedValue.js';
+import { useNotification } from '../../context/NotificationContext.jsx';
 
-const typeFilters = [
+const defaultFilters = {
+  search: '',
+  skill: '',
+  duration: '',
+  paid: 'all',
+  location: '',
+  workType: 'all',
+  sort: 'latest',
+};
+
+const workTypeOptions = [
   { label: 'All', value: 'all' },
   { label: 'Internship', value: 'Internship' },
+  { label: 'Part-time', value: 'Part-time' },
   { label: 'Full-time', value: 'Full-time' },
-  { label: 'Project', value: 'Project' },
 ];
 
+const paidOptions = [
+  { label: 'All', value: 'all' },
+  { label: 'Paid', value: 'paid' },
+  { label: 'Unpaid', value: 'unpaid' },
+];
+
+const sortOptions = [
+  { label: 'Latest', value: 'latest' },
+  { label: 'Highest stipend', value: 'highest-stipend' },
+  { label: 'Shortest duration', value: 'shortest-duration' },
+  { label: 'Closing soon', value: 'closing-soon' },
+];
+
+const resolveValue = (value, fallback = 'Not specified') => {
+  if (value === null || value === undefined || value === '') return fallback;
+  return value;
+};
+
+const formatDuration = (internship) => {
+  const duration = internship.duration || internship.duration_text || internship.duration_label;
+  if (duration) return duration;
+  const months = internship.duration_months ?? internship.duration_month;
+  if (months) return `${months} month${Number(months) === 1 ? '' : 's'}`;
+  const weeks = internship.duration_weeks ?? internship.duration_week;
+  if (weeks) return `${weeks} week${Number(weeks) === 1 ? '' : 's'}`;
+  return null;
+};
+
+const formatDeadline = (deadlineValue) => {
+  if (!deadlineValue) return null;
+  const date = new Date(deadlineValue);
+  if (Number.isNaN(date.getTime())) return deadlineValue;
+  return date.toLocaleDateString();
+};
+
+const parseFiltersFromParams = (params) => ({
+  search: params.get('search') ?? '',
+  skill: params.get('skill') ?? '',
+  duration: params.get('duration') ?? '',
+  paid: params.get('paid') ?? 'all',
+  location: params.get('location') ?? '',
+  workType: params.get('workType') ?? 'all',
+  sort: params.get('sort') ?? 'latest',
+});
+
+const areFiltersEqual = (first, second) =>
+  Object.keys(defaultFilters).every((key) => (first?.[key] ?? '') === (second?.[key] ?? ''));
+
 const Internships = () => {
+  const { notify } = useNotification();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [filters, setFilters] = useState(() => ({ ...defaultFilters, ...parseFiltersFromParams(searchParams) }));
   const [error, setError] = useState(null);
   const [applyLoading, setApplyLoading] = useState(false);
-  const [resumeLink, setResumeLink] = useState('');
-  const [successMessage, setSuccessMessage] = useState(null);
+  const [applyJobId, setApplyJobId] = useState(null);
+  const [resumeInputs, setResumeInputs] = useState({});
+  const [appliedJobIds, setAppliedJobIds] = useState([]);
 
-  const loadInternships = async (filterValue = activeFilter) => {
+  const debouncedSearch = useDebouncedValue(filters.search, 450);
+
+  const buildParams = useCallback(() => {
+    const params = {};
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (filters.skill) params.skill = filters.skill;
+    if (filters.duration) params.duration = filters.duration;
+    if (filters.location) params.location = filters.location;
+    if (filters.paid !== 'all') params.paid = filters.paid;
+    if (filters.workType !== 'all') params.type = filters.workType;
+    if (filters.sort) params.sort = filters.sort;
+    return params;
+  }, [debouncedSearch, filters.duration, filters.location, filters.paid, filters.skill, filters.sort, filters.workType]);
+
+  const loadInternships = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = filterValue !== 'all' ? { type: filterValue } : undefined;
+      const params = buildParams();
       const data = await fetchInternships(params);
       const results = Array.isArray(data?.results) ? data.results : data || [];
       setJobs(results);
-      if (results.length && !selectedJob) {
-        setSelectedJob(results[0]);
-      }
+      setSelectedJob((prev) => {
+        if (!results.length) return null;
+        if (prev && results.some((job) => job.id === prev.id)) return prev;
+        return results[0];
+      });
     } catch (err) {
       setError(err.message || 'Unable to load internships');
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildParams]);
+
+  useEffect(() => {
+    const nextFilters = { ...defaultFilters, ...parseFiltersFromParams(searchParams) };
+    setFilters((prev) => (areFiltersEqual(prev, nextFilters) ? prev : nextFilters));
+  }, [searchParams]);
 
   useEffect(() => {
     loadInternships();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadInternships]);
 
-  const filteredJobs = useMemo(() => {
-    if (activeFilter === 'all') return jobs;
-    return jobs.filter((job) => job.type === activeFilter);
-  }, [jobs, activeFilter]);
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+    if (debouncedSearch) nextParams.set('search', debouncedSearch);
+    if (filters.skill) nextParams.set('skill', filters.skill);
+    if (filters.duration) nextParams.set('duration', filters.duration);
+    if (filters.location) nextParams.set('location', filters.location);
+    if (filters.paid !== 'all') nextParams.set('paid', filters.paid);
+    if (filters.workType !== 'all') nextParams.set('workType', filters.workType);
+    if (filters.sort && filters.sort !== 'latest') nextParams.set('sort', filters.sort);
 
-  const handleFilterChange = (value) => {
-    setActiveFilter(value);
-    loadInternships(value);
-  };
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [debouncedSearch, filters, searchParams, setSearchParams]);
 
   const handleSelectJob = async (jobId) => {
-    setSuccessMessage(null);
-    setResumeLink('');
     try {
       const jobDetails = await fetchInternshipById(jobId);
       setSelectedJob(jobDetails || jobs.find((job) => job.id === jobId) || null);
@@ -72,20 +157,40 @@ const Internships = () => {
     }
   };
 
-  const handleApply = async (event) => {
-    event.preventDefault();
-    if (!selectedJob?.id) return;
+  const handleResumeInputChange = (jobId, value) => {
+    setResumeInputs((prev) => ({ ...prev, [jobId]: value }));
+  };
+
+  const handleSubmitApplication = async (job) => {
+    if (!job?.id) return;
+    if (appliedJobIds.includes(job.id)) return;
+    const resumeLink = resumeInputs[job.id];
+    if (!resumeLink) {
+      notify({ message: 'Please add your resume or portfolio link before submitting.', variant: 'error' });
+      return;
+    }
+    setApplyJobId(job.id);
     setApplyLoading(true);
-    setSuccessMessage(null);
     setError(null);
     try {
-      await applyToInternship(selectedJob.id, { resumeLink });
-      setSuccessMessage('Application sent successfully!');
+      await applyToInternship(job.id, { resumeLink });
+      setAppliedJobIds((prev) => (prev.includes(job.id) ? prev : [...prev, job.id]));
+      setResumeInputs((prev) => ({ ...prev, [job.id]: '' }));
+      notify({
+        message: 'Application submitted successfully. The organizer will contact you if shortlisted.',
+        variant: 'success',
+      });
     } catch (err) {
       setError(err.message || 'Failed to submit application');
     } finally {
       setApplyLoading(false);
+      setApplyJobId(null);
     }
+  };
+
+  const handleFilterChange = (field) => (event) => {
+    const value = event.target.value;
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -97,7 +202,122 @@ const Internships = () => {
         </p>
       </header>
 
-      <FilterBar filters={typeFilters} activeFilter={activeFilter} onFilterChange={handleFilterChange} />
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-body">Filter internships</h2>
+            <p className="text-xs text-muted">Use filters to narrow down your search.</p>
+          </div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {jobs.length} opportunities
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-2 md:col-span-2 xl:col-span-3">
+            <label htmlFor="search" className="text-xs font-semibold text-muted">
+              Search
+            </label>
+            <input
+              id="search"
+              type="text"
+              value={filters.search}
+              onChange={handleFilterChange('search')}
+              placeholder="Search internships"
+              className="w-full rounded-3xl border border-border bg-surface px-5 py-4 text-base outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="skill" className="text-xs font-semibold text-muted">
+              Skill required
+            </label>
+            <input
+              id="skill"
+              type="text"
+              value={filters.skill}
+              onChange={handleFilterChange('skill')}
+              placeholder="e.g. React"
+              className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="duration" className="text-xs font-semibold text-muted">
+              Duration
+            </label>
+            <input
+              id="duration"
+              type="text"
+              value={filters.duration}
+              onChange={handleFilterChange('duration')}
+              placeholder="e.g. 3 months"
+              className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="paid" className="text-xs font-semibold text-muted">
+              Paid / Unpaid
+            </label>
+            <select
+              id="paid"
+              value={filters.paid}
+              onChange={handleFilterChange('paid')}
+              className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+            >
+              {paidOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="location" className="text-xs font-semibold text-muted">
+              Location
+            </label>
+            <input
+              id="location"
+              type="text"
+              value={filters.location}
+              onChange={handleFilterChange('location')}
+              placeholder="Remote, On-campus"
+              className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="workType" className="text-xs font-semibold text-muted">
+              Work type
+            </label>
+            <select
+              id="workType"
+              value={filters.workType}
+              onChange={handleFilterChange('workType')}
+              className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+            >
+              {workTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="sort" className="text-xs font-semibold text-muted">
+              Sort by
+            </label>
+            <select
+              id="sort"
+              value={filters.sort}
+              onChange={handleFilterChange('sort')}
+              className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </Card>
 
       {loading ? (
         <div className="flex justify-center py-10">
@@ -110,98 +330,69 @@ const Internships = () => {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
           <div className="space-y-4">
-            {filteredJobs.map((job) => (
-              <Card key={job.id} className="space-y-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-body">{job.role_title}</h3>
-                    <p className="mt-1 text-sm text-muted">{job.company_name}</p>
-                  </div>
-                  <Badge variant="neutral" className="capitalize">
-                    {job.type}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted">{job.description}</p>
-                <div className="flex flex-wrap gap-2">
-                  {formatSkills(job.skill_tags || job.required_skills).map((skill) => (
-                    <Badge key={skill} variant="neutral">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-xs text-muted">
-                    {job.location ? <p>{job.location}</p> : null}
-                    {job.mode ? <p>{job.mode}</p> : null}
-                  </div>
-                  <div className="flex gap-3">
-                    <Button variant="subtle" size="sm" onClick={() => handleSelectJob(job.id)}>
-                      View Details
-                    </Button>
-                    <Button variant="primary" size="sm" onClick={() => setSelectedJob(job)}>
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              </Card>
+            {jobs.map((job) => (
+              <InternshipCard
+                key={job.id}
+                internship={job}
+                onViewDetails={handleSelectJob}
+                onResumeChange={handleResumeInputChange}
+                resumeValue={resumeInputs[job.id] ?? ''}
+                onSubmit={handleSubmitApplication}
+                isApplied={appliedJobIds.includes(job.id)}
+                applyLoading={applyLoading && applyJobId === job.id}
+              />
             ))}
 
-            {!filteredJobs.length && (
+            {!jobs.length && (
               <Card className="text-center text-sm text-muted">
                 No opportunities found. Try adjusting your filters.
               </Card>
             )}
           </div>
 
-          {selectedJob && (
+          {selectedJob ? (
             <Card className="sticky top-6 space-y-5">
               <div>
                 <h2 className="text-xl font-semibold text-body">{selectedJob.role_title}</h2>
-                <p className="mt-1 text-sm text-muted">
-                  {selectedJob.company_name}
-                </p>
+                <p className="mt-1 text-sm text-muted">{selectedJob.company_name}</p>
               </div>
+
               <div className="space-y-3 text-sm text-muted">
                 <p>{selectedJob.description}</p>
-                {selectedJob.salary_range ? <p>Stipend: {selectedJob.salary_range}</p> : null}
-                {selectedJob.location ? <p>Location: {selectedJob.location}</p> : null}
-                {selectedJob.mode ? <p>Mode: {selectedJob.mode}</p> : null}
+                <p>Duration: {resolveValue(formatDuration(selectedJob))}</p>
+                <p>
+                  Stipend:{' '}
+                  {resolveValue(
+                    selectedJob.stipend ||
+                      selectedJob.salary_range ||
+                      selectedJob.compensation ||
+                      selectedJob.stipend_range ||
+                      selectedJob.salary,
+                  )}
+                </p>
+                <p>Location: {resolveValue(selectedJob.location || selectedJob.mode || selectedJob.work_mode)}</p>
+                <p>Work type: {resolveValue(selectedJob.type || selectedJob.work_type)}</p>
+                <p>
+                  Application deadline:{' '}
+                  {resolveValue(
+                    formatDeadline(
+                      selectedJob.application_deadline ||
+                        selectedJob.deadline ||
+                        selectedJob.apply_by ||
+                        selectedJob.application_closes,
+                    ),
+                  )}
+                </p>
               </div>
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Skills</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {formatSkills(selectedJob.skill_tags || selectedJob.required_skills).map((skill) => (
-                    <Badge key={skill} variant="neutral">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              <form className="space-y-3" onSubmit={handleApply}>
-                <div className="space-y-2">
-                  <label htmlFor="resumeLink" className="text-xs font-semibold text-muted">
-                    Resume / Portfolio Link
-                  </label>
-                  <input
-                    id="resumeLink"
-                    type="url"
-                    required
-                    value={resumeLink}
-                    onChange={(event) => setResumeLink(event.target.value)}
-                    placeholder="https://"
-                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <Button type="submit" variant="primary" className="w-full" disabled={applyLoading}>
-                  {applyLoading ? <Loader size="sm" label="Submitting" inline /> : 'Submit Application'}
-                </Button>
-              </form>
-
-              {successMessage ? <p className="text-sm text-success">{successMessage}</p> : null}
+              {appliedJobIds.includes(selectedJob.id) ? (
+                <p className="text-sm font-medium text-success">
+                  You have already applied to this internship. You can update your application from the Applications
+                  section.
+                </p>
+              ) : null}
             </Card>
-          )}
+          ) : null}
         </div>
       )}
     </div>
