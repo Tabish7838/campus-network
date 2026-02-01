@@ -5,11 +5,15 @@ import Card from '../../components/Card/Card.jsx';
 import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
+import OnlineStatusDot from '../../components/OnlineStatusDot/OnlineStatusDot.jsx';
+import AvailabilityToggle from '../../components/AvailabilityToggle/AvailabilityToggle.jsx';
+import DebugOnlineStatus from '../../components/DebugOnlineStatus/DebugOnlineStatus.jsx';
 import { getMe, updateProfile, requestAdminUpgrade } from '../../services/user.api.js';
 import { createStartup, deleteMyStartup, getMyStartup } from '../../services/startup.api.js';
 import { formatLevel, formatTrustScore } from '../../utils/formatters.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useRole } from '../../context/RoleContext.jsx';
+import { useOnlineStatus, useAvailability } from '../../hooks/useOnlineStatus.js';
 
 const tabConfig = [
   { key: 'about', label: 'About' },
@@ -142,6 +146,13 @@ const StudentProfile = () => {
   const [isAdminPasswordModalOpen, setIsAdminPasswordModalOpen] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminPasswordError, setAdminPasswordError] = useState('');
+
+  // Online status and availability hooks
+  const { isOnline } = useOnlineStatus(profile?.id);
+  const { isAvailable, loading: availabilityLoading, toggleAvailability } = useAvailability(
+    profile?.id, 
+    profile?.available_to_work
+  );
 
   const getDisplayName = (currentProfile) => {
     if (currentProfile?.name) return currentProfile.name;
@@ -979,6 +990,17 @@ const StudentProfile = () => {
                 </p>
               )}
             </div>
+
+            {/* Availability Toggle */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-body">Work Availability</h3>
+              <AvailabilityToggle
+                isAvailable={isAvailable}
+                onToggle={toggleAvailability}
+                loading={availabilityLoading}
+                disabled={!profile?.id}
+              />
+            </div>
           </div>
         );
     }
@@ -1069,14 +1091,19 @@ const StudentProfile = () => {
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-1 items-start gap-4">
-              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border border-border/60 bg-surface shadow-md">
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-primary-dark text-2xl font-bold text-white">
-                    {getDisplayName(profile)[0]?.toUpperCase()}
-                  </div>
-                )}
+              <div className="relative">
+                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border border-border/60 bg-surface shadow-md">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-primary-dark text-2xl font-bold text-white">
+                      {getDisplayName(profile)[0]?.toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="absolute bottom-1 right-1">
+                  <OnlineStatusDot isOnline={isOnline} size="small" />
+                </div>
               </div>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
