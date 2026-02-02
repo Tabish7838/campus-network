@@ -12,6 +12,10 @@ const getLikes = async (req, res) => {
 
 const toggleLike = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
     const { postId } = req.params;
     const userId = req.user.id;
 
@@ -44,9 +48,13 @@ const toggleLike = async (req, res) => {
 
 const getLikeInfo = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
     const { postId } = req.params;
     const userId = req.user.id;
-    
+
     const likeInfo = await Like.getPostLikeInfo(postId, userId);
     res.status(200).json(likeInfo);
   } catch (error) {

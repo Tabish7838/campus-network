@@ -8,7 +8,7 @@ const Comment = {
         *,
         author:users(id, name, avatar_url, college, course, branch, year)
       `)
-      .eq('post_id', parseInt(postId))
+      .eq('post_id', postId)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -20,10 +20,7 @@ const Comment = {
   async create(commentData) {
     const { data, error } = await supabase
       .from('comments')
-      .insert({
-        ...commentData,
-        post_id: parseInt(commentData.post_id)
-      })
+      .insert(commentData)
       .select(`
         *,
         author:users(id, name, avatar_url, college, course, branch, year)
@@ -40,7 +37,7 @@ const Comment = {
     const { data, error } = await supabase
       .from('comments')
       .delete()
-      .eq('id', parseInt(commentId))
+      .eq('id', commentId)
       .eq('user_id', userId)
       .select()
       .single();
@@ -55,7 +52,7 @@ const Comment = {
     const { count, error } = await supabase
       .from('comments')
       .select('*', { count: 'exact', head: true })
-      .eq('post_id', parseInt(postId));
+      .eq('post_id', postId);
 
     if (error) {
       throw new Error(error.message);

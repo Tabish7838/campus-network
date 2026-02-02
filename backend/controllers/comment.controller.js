@@ -14,7 +14,7 @@ const createComment = async (req, res) => {
   try {
     const { postId } = req.params;
     const { content } = req.body;
-    
+
     if (!content || content.trim().length === 0) {
       return res.status(400).json({ message: 'Comment content is required' });
     }

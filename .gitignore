@@ -1,8 +1,15 @@
 # ===== Common =====
 node_modules/
+
+# ===== Environment Variables (NEVER COMMIT!) =====
 .env
 .env.local
 .env.production
+.env.development
+backend/.env
+backend/.env.local
+frontend/.env
+frontend/.env.local
 
 # ===== Frontend (Vite / React) =====
 frontend/node_modules/

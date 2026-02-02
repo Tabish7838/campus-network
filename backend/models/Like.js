@@ -8,7 +8,7 @@ const Like = {
         *,
         user:users(id, name, avatar_url)
       `)
-      .eq('post_id', parseInt(postId))
+      .eq('post_id', postId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -21,7 +21,7 @@ const Like = {
     const { data, error } = await supabase
       .from('likes')
       .select('id')
-      .eq('post_id', parseInt(postId))
+      .eq('post_id', postId)
       .eq('user_id', userId)
       .single();
 
@@ -35,7 +35,7 @@ const Like = {
     const { data, error } = await supabase
       .from('likes')
       .insert({
-        post_id: parseInt(postId),
+        post_id: postId,
         user_id: userId
       })
       .select(`
@@ -54,7 +54,7 @@ const Like = {
     const { data, error } = await supabase
       .from('likes')
       .delete()
-      .eq('post_id', parseInt(postId))
+      .eq('post_id', postId)
       .eq('user_id', userId)
       .select()
       .single();
@@ -69,7 +69,7 @@ const Like = {
     const { count, error } = await supabase
       .from('likes')
       .select('*', { count: 'exact', head: true })
-      .eq('post_id', parseInt(postId));
+      .eq('post_id', postId);
 
     if (error) {
       throw new Error(error.message);
@@ -83,11 +83,11 @@ const Like = {
       supabase
         .from('likes')
         .select('*', { count: 'exact', head: true })
-        .eq('post_id', parseInt(postId)),
+        .eq('post_id', postId),
       supabase
         .from('likes')
         .select('id')
-        .eq('post_id', parseInt(postId))
+        .eq('post_id', postId)
         .eq('user_id', userId)
         .single()
     ]);
@@ -97,7 +97,7 @@ const Like = {
     }
 
     const isLiked = !userLikeResult.error && !!userLikeResult.data;
-    
+
     return {
       count: likesResult.count || 0,
       isLiked
