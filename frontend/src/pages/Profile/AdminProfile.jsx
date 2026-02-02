@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Card from '../../components/Card/Card.jsx';
 import Badge from '../../components/Badge/Badge.jsx';
 import Button from '../../components/Button/Button.jsx';
@@ -15,6 +16,18 @@ const tabConfig = [
   { key: 'teams', label: 'Internships Posted' },
   { key: 'events', label: 'Events Hosted' },
 ];
+
+const AnimatedCard = ({ children, className = '', delay = 0, hover = true }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.98 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration: 0.35, ease: 'easeOut', delay }}
+    whileHover={hover ? { scale: 1.02 } : undefined}
+    className={className}
+  >
+    {children}
+  </motion.div>
+);
 
 const AdminProfile = () => {
   const { signOut } = useAuth();
@@ -277,7 +290,7 @@ const AdminProfile = () => {
             ) : (
               <div className="space-y-2">
                 {(profile.admin_skills || []).map((skill) => (
-                  <div key={skill} className="rounded-2xl bg-surface px-4 py-3 text-body transition-colors hover:bg-primary/5">
+                  <div key={skill} className="rounded-2xl bg-surface px-4 py-3 text-body transition duration-200 hover:bg-primary/5 hover:scale-[1.01]">
                     {skill}
                   </div>
                 ))}
@@ -291,7 +304,10 @@ const AdminProfile = () => {
           <div className="space-y-3">
             {teamsJoined.length ? (
               teamsJoined.map((team) => (
-                <div key={team.id || team.team_id || team.name} className="rounded-2xl bg-card border border-border p-4 transition-shadow hover:shadow-md">
+                <div
+                  key={team.id || team.team_id || team.name}
+                  className="rounded-2xl bg-card border border-border p-4 transition duration-200 hover:shadow-md hover:scale-[1.01]"
+                >
                   <p className="text-body font-semibold mb-2">{team.name || team.team_name}</p>
                   {team.event_name && <p className="text-xs text-muted mb-1">Event: {team.event_name}</p>}
                   {team.role && <p className="text-xs text-muted">Role: {team.role}</p>}
@@ -307,7 +323,10 @@ const AdminProfile = () => {
           <div className="space-y-3">
             {eventsParticipated.length ? (
               eventsParticipated.map((event) => (
-                <div key={event.id || event.event_id || event.title} className="rounded-2xl bg-card border border-border p-4 transition-shadow hover:shadow-md">
+                <div
+                  key={event.id || event.event_id || event.title}
+                  className="rounded-2xl bg-card border border-border p-4 transition duration-200 hover:shadow-md hover:scale-[1.01]"
+                >
                   <p className="text-body font-semibold mb-2">{event.title || event.name}</p>
                   {event.role && <p className="text-xs text-muted mb-1">Role: {event.role}</p>}
                   {event.stage && <p className="text-xs text-muted mb-1">Stage: {event.stage}</p>}
@@ -427,10 +446,13 @@ const AdminProfile = () => {
 
   if (!profile) return null;
 
-  return (
-    <div className="mx-auto max-w-md space-y-6 px-3 py-4">
-      <header className="space-y-4">
-        <div className="rounded-3xl bg-gradient-to-br from-primary/5 via-surface to-primary/10 p-6 shadow-sm transition-shadow duration-200 hover:shadow-lg">
+   return (
+     <div className="mx-auto max-w-md space-y-6 px-3 py-4">
+       <header className="space-y-4">
+        <AnimatedCard
+          delay={0}
+          className="rounded-3xl bg-gradient-to-br from-primary/5 via-surface to-primary/10 p-6 shadow-sm transition-shadow duration-200 hover:shadow-lg"
+        >
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-1 items-start gap-4">
               <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-2 border-primary/20 shadow-md">
@@ -542,9 +564,12 @@ const AdminProfile = () => {
               </Button>
             </div>
           </div>
-        </div>
+        </AnimatedCard>
 
-        <div className="rounded-2xl bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
+        <AnimatedCard
+          delay={0.1}
+          className="rounded-2xl bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md"
+        >
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2 text-center">
               <p className="text-2xl font-bold text-body">{formatTrustScore(profile.trust_score)}</p>
@@ -563,11 +588,14 @@ const AdminProfile = () => {
               <p className="text-xs font-medium uppercase tracking-wide text-muted">Events Hosted</p>
             </div>
           </div>
-        </div>
+        </AnimatedCard>
       </header>
 
       {profile.college && profile.course && profile.branch && profile.year && (
-        <div className="rounded-2xl bg-card border border-border p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
+        <AnimatedCard
+          delay={0.2}
+          className="rounded-2xl bg-card border border-border p-5 shadow-sm transition-shadow duration-200 hover:shadow-md"
+        >
           <h3 className="text-sm font-semibold text-body mb-4">Academic Information</h3>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
@@ -587,10 +615,13 @@ const AdminProfile = () => {
               <span className="text-muted">{profile.year}</span>
             </div>
           </div>
-        </div>
+        </AnimatedCard>
       )}
 
-      <div className="rounded-2xl bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
+      <AnimatedCard
+        delay={0.3}
+        className="rounded-2xl bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md"
+      >
         <div className="flex flex-wrap items-center gap-2 mb-5">
           {tabConfig.map((tab) => (
             <button
@@ -610,7 +641,7 @@ const AdminProfile = () => {
         <div className="rounded-2xl bg-card border border-border p-4">
           {tabContent}
         </div>
-      </div>
+      </AnimatedCard>
     </div>
   );
 };

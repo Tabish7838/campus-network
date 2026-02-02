@@ -13,16 +13,36 @@ const useFeedPosts = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [currentFilter, setCurrentFilter] = useState('all');
+  const [filters, setFilters] = useState({ stage: 'all', post_type: 'startup_idea' });
   const authorCacheRef = useRef(new Map());
 
-  const loadPosts = useCallback(async (stageFilter = 'all') => {
+  const loadPosts = useCallback(async (newFilters = {}) => {
     setLoading(true);
     setError(null);
-    setCurrentFilter(stageFilter);
+
+    // Merge new filters with existing ones
+    const updatedFilters = { ...filters, ...newFilters };
+
+    // If we're just initializing or passed a string (backward compatibility/simple usage)
+    if (typeof newFilters === 'string') {
+      updatedFilters.stage = newFilters;
+    } else {
+      // If passing an object, update state
+      setFilters(prev => ({ ...prev, ...newFilters }));
+    }
+
+    // Ensure we use the most up-to-date filters for the API call
+    // Note: React state updates are async, so we use the calculated merged object
+    const apiFilters = typeof newFilters === 'string'
+      ? { ...filters, stage: newFilters }
+      : { ...filters, ...newFilters };
 
     try {
-      const params = stageFilter !== 'all' ? { stage: stageFilter } : undefined;
+      // clean filters for API
+      const params = {};
+      if (apiFilters.stage && apiFilters.stage !== 'all') params.stage = apiFilters.stage;
+      if (apiFilters.post_type && apiFilters.post_type !== 'all') params.post_type = apiFilters.post_type;
+
       const feedResponse = await fetchFeed(params);
       const postsData = normalizePostsResponse(feedResponse);
 
@@ -58,7 +78,7 @@ const useFeedPosts = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters]);
 
   const resetCache = useCallback(() => {
     authorCacheRef.current = new Map();
@@ -69,11 +89,11 @@ const useFeedPosts = () => {
       posts,
       loading,
       error,
-      currentFilter,
+      filters,
       loadPosts,
       resetCache,
     }),
-    [posts, loading, error, currentFilter, loadPosts, resetCache],
+    [posts, loading, error, filters, loadPosts, resetCache],
   );
 
   return value;

@@ -29,19 +29,25 @@ const initialFormState = {
 };
 
 const Home = () => {
-  const { posts, loading, error, currentFilter, loadPosts } = useFeedPosts();
+  const { posts, loading, error, filters, loadPosts } = useFeedPosts();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(initialFormState);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState(null);
-  const [activePostType, setActivePostType] = useState('startup_idea');
 
+  // Initial load
   useEffect(() => {
-    loadPosts('all');
-  }, [loadPosts]);
+    // Only load if we haven't loaded yet, or strictly rely on the hook's state
+    // Actually, hook manages state, just trigger initial load with default if needed, 
+    // or let the hook's default state handle it? 
+    // The hook doesn't auto-load, so we must call loadPosts.
+    loadPosts({ stage: 'all', post_type: 'startup_idea' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
-  const handleFilterChange = (value) => {
-    loadPosts(value);
+  const handleFilterChange = (stageValue) => {
+    // User clicked a Stage filter (Ideation, MVP, Scaling)
+    loadPosts({ stage: stageValue });
   };
 
   const handleFormChange = (event) => {
@@ -69,7 +75,7 @@ const Home = () => {
       await createFeedPost(postData);
       setShowForm(false);
       setForm(initialFormState);
-      loadPosts(currentFilter || 'all');
+      loadPosts();
     } catch (err) {
       setFormError(err.message || 'Failed to create post');
     } finally {
@@ -105,7 +111,7 @@ const Home = () => {
 
   const handlePostDeleted = (deletedPostId) => {
     // Refresh the feed after a post is deleted
-    loadPosts(currentFilter || 'all');
+    loadPosts();
   };
 
   return (
@@ -142,12 +148,15 @@ const Home = () => {
           {postTypes.map((type) => (
             <button
               key={type.value}
-              onClick={() => setActivePostType(type.value)}
-              className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition ${
-                activePostType === type.value
-                  ? 'bg-primary text-white'
-                  : 'text-muted hover:text-body'
-              }`}
+              onClick={() => {
+                const newFilters = { post_type: type.value };
+                if (type.value === 'work_update') newFilters.stage = 'all';
+                loadPosts(newFilters);
+              }}
+              className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition ${filters?.post_type === type.value
+                ? 'bg-primary text-white'
+                : 'text-muted hover:text-body'
+                }`}
             >
               {type.label}
             </button>
@@ -200,11 +209,11 @@ const Home = () => {
                 onChange={handleFormChange}
                 className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
                 placeholder={
-                  form.post_type === 'startup_idea' 
-                    ? 'e.g. AI Study Buddy' 
+                  form.post_type === 'startup_idea'
+                    ? 'e.g. AI Study Buddy'
                     : form.post_type === 'project'
-                    ? 'e.g. E-commerce Website'
-                    : 'e.g. Completed React Dashboard'
+                      ? 'e.g. E-commerce Website'
+                      : 'e.g. Completed React Dashboard'
                 }
               />
             </div>
@@ -224,8 +233,8 @@ const Home = () => {
                   form.post_type === 'startup_idea'
                     ? 'Describe your idea, goals, and what you need'
                     : form.post_type === 'project'
-                    ? 'Describe your project, tech stack, and team needs'
-                    : 'Share your progress, achievements, or learnings'
+                      ? 'Describe your project, tech stack, and team needs'
+                      : 'Share your progress, achievements, or learnings'
                 }
               />
             </div>
@@ -278,7 +287,9 @@ const Home = () => {
         </Card>
       )}
 
-      <FilterBar filters={stageFilters} activeFilter={currentFilter} onFilterChange={handleFilterChange} />
+      {filters?.post_type !== 'work_update' && (
+        <FilterBar filters={stageFilters} activeFilter={filters?.stage || 'all'} onFilterChange={handleFilterChange} />
+      )}
 
       {loading ? (
         <div className="flex justify-center py-10">
@@ -291,9 +302,9 @@ const Home = () => {
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <PostCard 
-              key={post.post_id || post.id} 
-              post={post} 
+            <PostCard
+              key={post.post_id || post.id}
+              post={post}
               onPostDeleted={handlePostDeleted}
             />
           ))}
