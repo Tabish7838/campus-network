@@ -10,8 +10,12 @@ const Post = {
       like_count:likes(count)
     `);
 
-    if (filters.stage) {
+    if (filters.stage && filters.stage !== 'all') {
       query = query.eq('stage', filters.stage);
+    }
+
+    if (filters.post_type && filters.post_type !== 'all') {
+      query = query.eq('post_type', filters.post_type);
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
