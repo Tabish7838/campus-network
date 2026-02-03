@@ -5,7 +5,6 @@ import Loader from '../../components/Loader/Loader.jsx';
 import InternshipCard from '../../components/InternshipCard/InternshipCard.jsx';
 import {
   fetchInternships,
-  fetchInternshipById,
   applyToInternship,
 } from '../../services/internship.api.js';
 import { formatSkills } from '../../utils/formatters.js';
@@ -81,7 +80,6 @@ const Internships = () => {
   const { notify } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState(() => ({ ...defaultFilters, ...parseFiltersFromParams(searchParams) }));
   const [error, setError] = useState(null);
@@ -112,11 +110,6 @@ const Internships = () => {
       const data = await fetchInternships(params);
       const results = Array.isArray(data?.results) ? data.results : data || [];
       setJobs(results);
-      setSelectedJob((prev) => {
-        if (!results.length) return null;
-        if (prev && results.some((job) => job.id === prev.id)) return prev;
-        return results[0];
-      });
     } catch (err) {
       setError(err.message || 'Unable to load internships');
     } finally {
@@ -147,15 +140,6 @@ const Internships = () => {
       setSearchParams(nextParams, { replace: true });
     }
   }, [debouncedSearch, filters, searchParams, setSearchParams]);
-
-  const handleSelectJob = async (jobId) => {
-    try {
-      const jobDetails = await fetchInternshipById(jobId);
-      setSelectedJob(jobDetails || jobs.find((job) => job.id === jobId) || null);
-    } catch (err) {
-      setError(err.message || 'Unable to load internship details');
-    }
-  };
 
   const handleResumeInputChange = (jobId, value) => {
     setResumeInputs((prev) => ({ ...prev, [jobId]: value }));
@@ -328,71 +312,24 @@ const Internships = () => {
           <p>{error}</p>
         </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-          <div className="space-y-4">
-            {jobs.map((job) => (
-              <InternshipCard
-                key={job.id}
-                internship={job}
-                onViewDetails={handleSelectJob}
-                onResumeChange={handleResumeInputChange}
-                resumeValue={resumeInputs[job.id] ?? ''}
-                onSubmit={handleSubmitApplication}
-                isApplied={appliedJobIds.includes(job.id)}
-                applyLoading={applyLoading && applyJobId === job.id}
-              />
-            ))}
+        <div className="space-y-4">
+          {jobs.map((job) => (
+            <InternshipCard
+              key={job.id}
+              internship={job}
+              onResumeChange={handleResumeInputChange}
+              resumeValue={resumeInputs[job.id] ?? ''}
+              onSubmit={handleSubmitApplication}
+              isApplied={appliedJobIds.includes(job.id)}
+              applyLoading={applyLoading && applyJobId === job.id}
+            />
+          ))}
 
-            {!jobs.length && (
-              <Card className="text-center text-sm text-muted">
-                No opportunities found. Try adjusting your filters.
-              </Card>
-            )}
-          </div>
-
-          {selectedJob ? (
-            <Card className="sticky top-6 space-y-5">
-              <div>
-                <h2 className="text-xl font-semibold text-body">{selectedJob.role_title}</h2>
-                <p className="mt-1 text-sm text-muted">{selectedJob.company_name}</p>
-              </div>
-
-              <div className="space-y-3 text-sm text-muted">
-                <p>{selectedJob.description}</p>
-                <p>Duration: {resolveValue(formatDuration(selectedJob))}</p>
-                <p>
-                  Stipend:{' '}
-                  {resolveValue(
-                    selectedJob.stipend ||
-                      selectedJob.salary_range ||
-                      selectedJob.compensation ||
-                      selectedJob.stipend_range ||
-                      selectedJob.salary,
-                  )}
-                </p>
-                <p>Location: {resolveValue(selectedJob.location || selectedJob.mode || selectedJob.work_mode)}</p>
-                <p>Work type: {resolveValue(selectedJob.type || selectedJob.work_type)}</p>
-                <p>
-                  Application deadline:{' '}
-                  {resolveValue(
-                    formatDeadline(
-                      selectedJob.application_deadline ||
-                        selectedJob.deadline ||
-                        selectedJob.apply_by ||
-                        selectedJob.application_closes,
-                    ),
-                  )}
-                </p>
-              </div>
-
-              {appliedJobIds.includes(selectedJob.id) ? (
-                <p className="text-sm font-medium text-success">
-                  You have already applied to this internship. You can update your application from the Applications
-                  section.
-                </p>
-              ) : null}
+          {!jobs.length && (
+            <Card className="text-center text-sm text-muted">
+              No opportunities found. Try adjusting your filters.
             </Card>
-          ) : null}
+          )}
         </div>
       )}
     </div>

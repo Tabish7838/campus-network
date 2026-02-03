@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import Card from '../../components/Card/Card.jsx';
 import Button from '../../components/Button/Button.jsx';
 import Loader from '../../components/Loader/Loader.jsx';
@@ -28,12 +28,16 @@ const initialFormState = {
   post_type: 'startup_idea',
 };
 
+const HomeQuickScroll = lazy(() => import('../../components/HomeQuickScroll/HomeQuickScroll.jsx'));
+
 const Home = () => {
   const { posts, loading, error, filters, loadPosts } = useFeedPosts();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(initialFormState);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Initial load
   useEffect(() => {
@@ -114,6 +118,8 @@ const Home = () => {
     loadPosts();
   };
 
+  const shouldShowQuickScroll = !isSearchFocused && !searchTerm.trim();
+
   return (
     <div className="space-y-6">
       <header className="space-y-3">
@@ -167,9 +173,19 @@ const Home = () => {
         <input
           type="text"
           placeholder="Search ideas, projects, people"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
           className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
         />
       </header>
+
+      {shouldShowQuickScroll && (
+        <Suspense fallback={null}>
+          <HomeQuickScroll />
+        </Suspense>
+      )}
 
 
       {showForm && (
