@@ -30,7 +30,7 @@ const routes = [
   {
     path: '/hire',
     element: HirePage,
-    allowedRoles: ['admin'],
+    allowedRoles: ['admin', 'student'],
   },
   {
     path: '/events',
